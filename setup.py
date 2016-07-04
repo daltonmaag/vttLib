@@ -20,6 +20,9 @@ setup_params = dict(
     package_dir={"": "src"},
     packages=setuptools.find_packages(),
     include_package_data=True,
+    install_requires=[
+        'pyparsing>=2.1.5',
+    ],
     setup_requires=[
         'setuptools_scm>=1.9',
     ] + pytest_runner + wheel,
