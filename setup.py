@@ -1,5 +1,5 @@
 import sys
-from setuptools import setup
+import setuptools
 
 
 name = "vttLib"
@@ -17,6 +17,7 @@ setup_params = dict(
     author="Dalton Maag Ltd",
     author_email="info@daltonmaag.com",
     license="MIT",
+    package_dir={"": "src"},
     packages=setuptools.find_packages(),
     include_package_data=True,
     setup_requires=[
