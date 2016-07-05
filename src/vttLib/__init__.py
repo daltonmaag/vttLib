@@ -1,14 +1,9 @@
 from __future__ import print_function, division, absolute_import
 import re
-import string
 import array
 from collections import deque
 
-from pyparsing import (
-    Word, nums, Suppress, pyparsing_common, oneOf, tokenMap, Combine,
-    OneOrMore, Optional, Literal, nestedExpr, Group, cStyleComment,
-    ParseException
-)
+from .parser import AssemblyParser, ParseException
 
 from fontTools.ttLib import newTable, TTLibError
 from fontTools.ttLib.tables.ttProgram import Program
@@ -17,81 +12,6 @@ from fontTools.misc.py23 import StringIO
 
 class VTTLibError(TTLibError):
     pass
-
-
-VTT_MNEMONIC_FLAGS = {
-    # Direction
-    "X": '1',    # X axis
-    "Y": '0',    # Y axis
-
-    # Outline
-    "O": '1',    # Use original outline
-    "N": '0',    # Use gridfitted outline
-
-    # Rounding or Line Relation
-    "R": '1',    # Round distance; or perpedicular to line
-    "r": '0',    # Do not round distance; or parallel to line
-
-    # Reference Point Autoset
-    "M": '1',    # Set rp0 to point number on the stack
-    "m": '0',    # Do not set rp0
-
-    # Reference Point Usage
-    "1": '1',    # Use rp1
-    "2": '0',    # Use rp2
-
-    # Minimum Distance flag
-    ">": '1',    # Obey minimum distance
-    "<": '0',    # Do not obey minimum distance
-
-    # Color (Distance Type)
-    "Gr": '00',  # Gray
-    "Bl": '01',  # Black
-    "Wh": '10',  # White
-}
-
-
-alpha_upper = string.ascii_uppercase
-
-mnemonic = Word(
-    alpha_upper, bodyChars=alpha_upper + nums
-).setResultsName("mnemonic")
-
-stack_item = Suppress(",") + (pyparsing_common.signedInteger | Suppress("*"))
-
-flag = oneOf(list(VTT_MNEMONIC_FLAGS.keys()))
-# convert flag to binary string
-flag.setParseAction(tokenMap(lambda t: VTT_MNEMONIC_FLAGS[t]))
-flags = Combine(OneOrMore(flag)).setResultsName("flags")
-
-delta_point_index = pyparsing_common.integer.setResultsName("point_index")
-delta_rel_ppem = pyparsing_common.integer.setResultsName("rel_ppem")
-delta_step_no = pyparsing_common.signedInteger.setResultsName("step_no")
-# the step denominator is only used in VTT's DELTA[CP]* instructions,
-# and must always be 8 (sic!), so we can suppress it.
-delta_spec = (delta_point_index + Suppress("@") + delta_rel_ppem +
-              delta_step_no + Optional(Literal("/8")).suppress())
-
-delta = nestedExpr("(", ")", delta_spec, ignoreExpr=None)
-
-deltas = Group(OneOrMore(delta)).setResultsName("deltas")
-
-args = deltas | flags
-
-stack_items = OneOrMore(stack_item).setResultsName("stack_items")
-
-instruction = Group(
-    mnemonic + Suppress("[") + Optional(args) + Suppress("]") +
-    Optional(stack_items)
-)
-
-pragma_memonic = Word("#", bodyChars=alpha_upper).setResultsName("mnemonic")
-
-pragma = Group(pragma_memonic + Optional(stack_items))
-
-comment = cStyleComment.suppress()
-
-vtt_assembly = OneOrMore(comment | pragma | instruction)
 
 
 def set_cvt_table(font, data):
@@ -112,7 +32,7 @@ def set_cvt_table(font, data):
 
 
 def transform_assembly(data):
-    tokens = vtt_assembly.parseString(data, parseAll=True)
+    tokens = AssemblyParser.parseString(data, parseAll=True)
 
     push_on = True
     push_indexes = [0]
