@@ -111,82 +111,78 @@ def set_cvt_table(font, data):
         font["cvt "].values = values
 
 
-class VTTProgram(Program):
+def transform_assembly(data):
+    tokens = vtt_assembly.parseString(data, parseAll=True)
 
-    def fromAssembly(self, string):
-        tokens = vtt_assembly.parseString(string, parseAll=True)
+    push_on = True
+    push_indexes = [0]
+    stream = [deque()]
+    pos = 1
+    for t in tokens:
+        mnemonic = t.mnemonic
 
-        push_on = True
-        push_indexes = [0]
-        stream = [deque()]
-        pos = 1
-        for t in tokens:
-            mnemonic = t.mnemonic
+        if mnemonic in ("USEMYMETRICS", "OVERLAP", "OFFSET"):
+            # XXX these are not part of the TT instruction set...
+            continue
 
-            if mnemonic in ("USEMYMETRICS", "OVERLAP", "OFFSET"):
-                # XXX these are not part of the TT instruction set...
-                continue
+        elif mnemonic == "#PUSHON":
+            push_on = True
+            continue
+        elif mnemonic == "#PUSHOFF":
+            push_on = False
+            continue
 
-            elif mnemonic == "#PUSHON":
-                push_on = True
-                continue
-            elif mnemonic == "#PUSHOFF":
-                push_on = False
-                continue
-
-            elif mnemonic == "#BEGIN":
-                # XXX shouldn't these be ignored in #PUSHOFF mode?
-                push_indexes.append(pos)
-                stream.append(deque())
-                pos += 1
-                continue
-            elif mnemonic == "#END":
-                pi = push_indexes.pop()
-                stack = stream[pi]
-                if len(stack):
-                    stream[pi] = "PUSH[] %s" % " ".join([str(i) for i in stack])
-                continue
-
-            elif mnemonic == "#PUSH":
-                # XXX push stack items whether or not in #PUSHON/OFF?
-                stream.append(
-                    "PUSH[] %s" % " ".join([str(i) for i in t.stack_items]))
-                pos += 1
-                continue
-
-            elif mnemonic.startswith(("DLTC", "DLTP", "DELTAP", "DELTAC")):
-                assert push_on
-                n = len(t.deltas)
-                assert n > 0
-                stack = stream[push_indexes[-1]]
-                stack.appendleft(n)
-                for point_index, rel_ppem, step_no in reversed(t.deltas):
-                    if mnemonic.startswith(("DELTAP", "DELTAC")):
-                        rel_ppem -= 9  # subtract the default 'delta base'
-                    stack.appendleft(point_index)
-                    # -8: 0, ... -1: 7, 1: 8, ... 8: 15
-                    selector = (step_no + 7) if step_no > 0 else (step_no + 8)
-                    stack.appendleft((rel_ppem << 4) | selector)
-                if mnemonic.startswith("DLT"):
-                    mnemonic = mnemonic.replace("DLT", "DELTA")
-            else:
-                if push_on:
-                    for i in reversed(t.stack_items):
-                        stream[push_indexes[-1]].appendleft(i)
-                else:
-                    assert not t.stack_items
-
-            stream.append("%s[%s]" % (mnemonic, t.flags))
+        elif mnemonic == "#BEGIN":
+            # XXX shouldn't these be ignored in #PUSHOFF mode?
+            push_indexes.append(pos)
+            stream.append(deque())
             pos += 1
+            continue
+        elif mnemonic == "#END":
+            pi = push_indexes.pop()
+            stack = stream[pi]
+            if len(stack):
+                stream[pi] = "PUSH[] %s" % " ".join([str(i) for i in stack])
+            continue
 
-        assert len(push_indexes) == 1 and push_indexes[0] == 0, push_indexes
-        stack = stream[0]
-        if len(stack):
-            stream[0] = "PUSH[] %s" % " ".join([str(i) for i in stack])
+        elif mnemonic == "#PUSH":
+            # XXX push stack items whether or not in #PUSHON/OFF?
+            stream.append(
+                "PUSH[] %s" % " ".join([str(i) for i in t.stack_items]))
+            pos += 1
+            continue
 
-        stream = [i for i in stream if i]
+        elif mnemonic.startswith(("DLTC", "DLTP", "DELTAP", "DELTAC")):
+            assert push_on
+            n = len(t.deltas)
+            assert n > 0
+            stack = stream[push_indexes[-1]]
+            stack.appendleft(n)
+            for point_index, rel_ppem, step_no in reversed(t.deltas):
+                if mnemonic.startswith(("DELTAP", "DELTAC")):
+                    rel_ppem -= 9  # subtract the default 'delta base'
+                stack.appendleft(point_index)
+                # -8: 0, ... -1: 7, 1: 8, ... 8: 15
+                selector = (step_no + 7) if step_no > 0 else (step_no + 8)
+                stack.appendleft((rel_ppem << 4) | selector)
+            if mnemonic.startswith("DLT"):
+                mnemonic = mnemonic.replace("DLT", "DELTA")
+        else:
+            if push_on:
+                for i in reversed(t.stack_items):
+                    stream[push_indexes[-1]].appendleft(i)
+            else:
+                assert not t.stack_items
 
-        super(VTTProgram, self).fromAssembly(stream)
+        stream.append("%s[%s]" % (mnemonic, t.flags))
+        pos += 1
+
+    assert len(push_indexes) == 1 and push_indexes[0] == 0, push_indexes
+    stack = stream[0]
+    if len(stack):
+        stream[0] = "PUSH[] %s" % " ".join([str(i) for i in stack])
+
+    return "\n".join([i for i in stream if i])
 
 
 def pformat_tti(program, preserve=False):
@@ -218,61 +214,67 @@ def pformat_tti(program, preserve=False):
     return stream.getvalue()
 
 
-def transform_assembly(data, name):
-    program = VTTProgram()
+def make_program(vtt_assembly, name=None):
     try:
-        program.fromAssembly(data)
+        ft_assembly = transform_assembly(vtt_assembly)
     except ParseException as e:
         import sys
-        sys.stderr.write(name + "\n\n")
-        sys.stderr.write(data + "\n\n")
+        if name:
+            sys.stderr.write(
+                'An error occurred while parsing "%s" program:\n' % name)
+        sys.stderr.write(e.markInputline() + "\n\n")
         raise VTTLibError(e)
+    program = Program()
+    program.fromAssembly(ft_assembly)
     # need to compile bytecode for PUSH optimization
-    program.getBytecode()
+    program._assemble()
+    del program.assembly
     return program
 
 
-def get_vtt_assembly(font, name):
-    if "TSI1" not in font:
-        raise VTTLibError("The font contains no 'TSI1' table")
-    tsi1 = font['TSI1']
+def get_extra_assembly(font, tag):
+    if tag not in ("cvt", "cvt ", "prep", "ppgm", "fpgm"):
+        raise ValueError("Invalid tag: %r" % tag)
+    if tag == "prep":
+        tag = "ppgm"
+    return _get_assembly(font, tag.strip())
 
-    try:
-        if name in ("cvt", "ppgm", "prep", "fpgm"):
-            if name == "prep":
-                name = "ppgm"
-            data = tsi1.extraPrograms[name]
-        else:
-            data = tsi1.glyphPrograms[name]
-    except KeyError:
-        raise VTTLibError("Can't find '%s' in TSI1 table" % name)
 
+def get_glyph_assembly(font, name):
+    return _get_assembly(font, name, is_glyph=True)
+
+
+def _get_assembly(font, name, is_glyph=False):
+    if is_glyph:
+        data = font['TSI1'].glyphPrograms[name]
+    else:
+        data = font['TSI1'].extraPrograms[name]
     # normalize line endings as VTT somehow uses Macintosh-style CR...
     return "\n".join(data.splitlines())
 
 
 def compile_instructions(font, ship=True):
-    control_program = get_vtt_assembly(font, 'cvt')
+    if "glyf" not in font:
+        raise VTTLibError("Missing 'glyf' table; not a TrueType font")
+    if "TSI1" not in font:
+        raise VTTLibError("The font contains no 'TSI1' table")
+
+    control_program = get_extra_assembly(font, "cvt")
     set_cvt_table(font, control_program)
 
     for tag in ("prep", "fpgm"):
         if tag not in font:
             font[tag] = newTable(tag)
-        data = get_vtt_assembly(font, tag)
-        program = transform_assembly(data, tag)
-        if not program:
-            raise VTTLibError("%s program is empty" % tag)
-        font[tag].program = program
+        data = get_extra_assembly(font, tag)
+        font[tag].program = make_program(data, tag)
 
-    if 'glyf' not in font:
-        raise VTTLibError("Missing 'glyf' table; not a TrueType font")
     glyf_table = font['glyf']
     for glyph_name in font.getGlyphOrder():
         try:
-            data = get_vtt_assembly(font, glyph_name)
-        except VTTLibError:
+            data = get_glyph_assembly(font, glyph_name)
+        except KeyError:
             continue
-        program = transform_assembly(data, glyph_name)
+        program = make_program(data, glyph_name)
         if program:
             glyph = glyf_table[glyph_name]
             glyph.program = program
