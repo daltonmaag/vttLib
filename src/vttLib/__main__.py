@@ -41,4 +41,5 @@ def main(args=None):
         font.save(options.outfile)
 
 
-main()
+if __name__ == "__main__":
+    main()
