@@ -4,7 +4,7 @@ import string
 from pyparsing import (
     Word, nums, Suppress, pyparsing_common, oneOf, tokenMap, Combine,
     OneOrMore, Optional, Literal, nestedExpr, Group, cStyleComment,
-    ParseException
+    Regex, ParseException
 )
 
 
@@ -49,7 +49,13 @@ mnemonic = Word(
     alpha_upper, bodyChars=alpha_upper + nums
 ).setResultsName("mnemonic")
 
-stack_item = Suppress(",") + (pyparsing_common.signedInteger | Suppress("*"))
+# XXX can't use pyparsing_common.signedInteger as the latest pyparsing 2.1.5
+# has a bug which always converts them to floats. Remove this once 2.1.6 is
+# published on PyPI.
+signed_integer = Regex(r'[+-]?\d+').setName("signed integer").setParseAction(
+    tokenMap(int))
+
+stack_item = Suppress(",") + (signed_integer | Suppress("*"))
 
 flag = oneOf(list(VTT_MNEMONIC_FLAGS.keys()))
 # convert flag to binary string
@@ -58,7 +64,7 @@ flags = Combine(OneOrMore(flag)).setResultsName("flags")
 
 delta_point_index = pyparsing_common.integer.setResultsName("point_index")
 delta_rel_ppem = pyparsing_common.integer.setResultsName("rel_ppem")
-delta_step_no = pyparsing_common.signedInteger.setResultsName("step_no")
+delta_step_no = signed_integer.setResultsName("step_no")
 # the step denominator is only used in VTT's DELTA[CP]* instructions,
 # and must always be 8 (sic!), so we can suppress it.
 delta_spec = (delta_point_index + Suppress("@") + delta_rel_ppem +
