@@ -50,24 +50,6 @@ VTT_MNEMONIC_FLAGS = {
     "Wh": '10',  # White
 }
 
-DELTA_SELECTOR = {
-    -8: 0,
-    -7: 1,
-    -6: 2,
-    -5: 3,
-    -4: 4,
-    -3: 5,
-    -2: 6,
-    -1: 7,
-    1: 8,
-    2: 9,
-    3: 10,
-    4: 11,
-    5: 12,
-    6: 13,
-    7: 14,
-    8: 15,
-}
 
 alpha_upper = string.ascii_uppercase
 
@@ -182,7 +164,9 @@ class VTTProgram(Program):
                     if mnemonic.startswith(("DELTAP", "DELTAC")):
                         rel_ppem -= 9  # subtract the default 'delta base'
                     stack.appendleft(point_index)
-                    stack.appendleft((rel_ppem << 4) | DELTA_SELECTOR[step_no])
+                    # -8: 0, ... -1: 7, 1: 8, ... 8: 15
+                    selector = (step_no + 7) if step_no > 0 else (step_no + 8)
+                    stack.appendleft((rel_ppem << 4) | selector)
                 if mnemonic.startswith("DLT"):
                     mnemonic = mnemonic.replace("DLT", "DELTA")
             else:
