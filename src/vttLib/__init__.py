@@ -1,7 +1,7 @@
 from __future__ import print_function, division, absolute_import
 import re
 import array
-from collections import deque
+from collections import deque, namedtuple
 
 from .parser import AssemblyParser, ParseException
 
@@ -31,18 +31,37 @@ def set_cvt_table(font, data):
         font["cvt "].values = values
 
 
-def transform_assembly(data):
+Component = namedtuple('Component', 'index x y round_to_grid use_my_metrics')
+ROUND_XY_TO_GRID = (1 << 2)
+USE_MY_METRICS = (1 << 9)
+
+
+def transform_assembly(data, components=None):
     tokens = AssemblyParser.parseString(data, parseAll=True)
 
     push_on = True
     push_indexes = [0]
     stream = [deque()]
     pos = 1
+    if components is None:
+        components = []
+    round_to_grid = False
+    use_my_metrics = False
     for t in tokens:
         mnemonic = t.mnemonic
 
-        if mnemonic in ("USEMYMETRICS", "OVERLAP", "OFFSET"):
-            # XXX these are not part of the TT instruction set...
+        if mnemonic == "OVERLAP":
+            # this component flag is ignored by VTT so we ignore it too
+            continue
+        elif mnemonic == "USEMYMETRICS":
+            use_my_metrics = True
+            continue
+        elif mnemonic == "OFFSET":
+            round_to_grid = t.flags == '1'
+            index, x, y = t.stack_items
+            component = Component(index, x, y, round_to_grid, use_my_metrics)
+            components.append(component)
+            use_my_metrics = round_to_grid = False
             continue
 
         elif mnemonic == "#PUSHON":
@@ -134,9 +153,9 @@ def pformat_tti(program, preserve=False):
     return stream.getvalue()
 
 
-def make_program(vtt_assembly, name=None):
+def make_program(vtt_assembly, name=None, components=None):
     try:
-        ft_assembly = transform_assembly(vtt_assembly)
+        ft_assembly = transform_assembly(vtt_assembly, components)
     except ParseException as e:
         import sys
         if name:
@@ -150,6 +169,12 @@ def make_program(vtt_assembly, name=None):
     program._assemble()
     del program.assembly
     return program
+
+
+def make_glyph_program(vtt_assembly, name=None):
+    components = []
+    program = make_program(vtt_assembly, name, components)
+    return program, components
 
 
 def get_extra_assembly(font, tag):
@@ -173,6 +198,23 @@ def _get_assembly(font, name, is_glyph=False):
     return "\n".join(data.splitlines())
 
 
+def set_components(glyph, vtt_components, glyph_order):
+    assert len(vtt_components) == len(glyph.components)
+    for i, comp in enumerate(glyph.components):
+        vttcomp = vtt_components[i]
+        base_name = comp.glyphName
+        assert vttcomp.index == glyph_order.index(base_name)
+        assert (comp.x, comp.y) == (vttcomp.x, vttcomp.y)
+        if vttcomp.use_my_metrics:
+            comp.flags |= USE_MY_METRICS
+        else:
+            comp.flags &= ~USE_MY_METRICS
+        if vttcomp.round_to_grid:
+            comp.flags |= ROUND_XY_TO_GRID
+        else:
+            comp.flags &= ~ROUND_XY_TO_GRID
+
+
 def compile_instructions(font, ship=True):
     if "glyf" not in font:
         raise VTTLibError("Missing 'glyf' table; not a TrueType font")
@@ -188,16 +230,20 @@ def compile_instructions(font, ship=True):
         data = get_extra_assembly(font, tag)
         font[tag].program = make_program(data, tag)
 
+    glyph_order = font.getGlyphOrder()
     glyf_table = font['glyf']
-    for glyph_name in font.getGlyphOrder():
+    for glyph_name in glyph_order:
         try:
             data = get_glyph_assembly(font, glyph_name)
         except KeyError:
             continue
-        program = make_program(data, glyph_name)
-        if program:
+        program, components = make_glyph_program(data, glyph_name)
+        if program or components:
             glyph = glyf_table[glyph_name]
-            glyph.program = program
+            if components:
+                set_components(glyph, components, glyph_order)
+            if program:
+                glyph.program = program
 
     if ship:
         for tag in ("TSI%d" % i for i in (0, 1, 2, 3, 5)):
