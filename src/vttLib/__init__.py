@@ -1,4 +1,5 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import (
+    print_function, division, absolute_import, unicode_literals)
 import re
 import array
 from collections import deque, namedtuple
@@ -7,7 +8,23 @@ from .parser import AssemblyParser, ParseException
 
 from fontTools.ttLib import newTable, TTLibError
 from fontTools.ttLib.tables.ttProgram import Program
-from fontTools.misc.py23 import StringIO
+from fontTools.misc.py23 import StringIO, tobytes, tounicode, tostr
+from fontTools.ttLib.tables._g_l_y_f import (
+    USE_MY_METRICS, ROUND_XY_TO_GRID, UNSCALED_COMPONENT_OFFSET,
+    SCALED_COMPONENT_OFFSET,
+)
+
+
+_use_my_metrics = r"^USEMYMETRICS\[\][\r\n]?"
+_overlap = r"^OVERLAP\[\][\r\n]?"
+_unscaled_component_offset = r"^UNSCALEDCOMPONENTOFFSET\[\][\r\n]?"
+_anchor = r"^ANCHOR\[\](?:, *-?[0-9]+){3}[\r\n]?"
+_offset = r"^OFFSET\[[rR]\](?:, *-?[0-9]+){3}[\r\n]?"
+composite_info_RE = re.compile(
+    "(%s)|(%s)|(%s)|(%s)|(%s)" % (
+        _use_my_metrics, _overlap, _unscaled_component_offset, _anchor, _offset
+    ), re.MULTILINE
+)
 
 
 class VTTLibError(TTLibError):
@@ -16,7 +33,7 @@ class VTTLibError(TTLibError):
 
 def set_cvt_table(font, data):
     data = re.sub(r"/\*.*?\*/", "", data, flags=re.DOTALL)
-    values = array.array("h")
+    values = array.array(tostr("h"))
     # control values are defined in VTT Control Program as colon-separated
     # INDEX: VALUE pairs
     for m in re.finditer(r"^\s*([0-9]+):\s*(-?[0-9]+)", data, re.MULTILINE):
@@ -32,8 +49,6 @@ def set_cvt_table(font, data):
 
 
 Component = namedtuple('Component', 'index x y round_to_grid use_my_metrics')
-ROUND_XY_TO_GRID = (1 << 2)
-USE_MY_METRICS = (1 << 9)
 
 
 def transform_assembly(data, components=None):
@@ -190,12 +205,33 @@ def get_glyph_assembly(font, name):
 
 
 def _get_assembly(font, name, is_glyph=False):
+    if 'TSI1' not in font:
+        raise VTTLibError("TSI1 table not found")
+    try:
+        if is_glyph:
+            data = font['TSI1'].glyphPrograms[name]
+        else:
+            data = font['TSI1'].extraPrograms[name]
+    except KeyError:
+        raise VTTLibError(
+            "%s program missing from TSI1: '%s'" % (
+                "Glyph" if is_glyph else "Extra", name))
+    return tounicode(data.replace(b"\r", b"\n"), encoding='utf-8')
+
+
+def set_glyph_assembly(font, name, data):
+    _set_assembly(font, name, data, is_glyph=True)
+
+
+def _set_assembly(font, name, data, is_glyph=False):
+    if 'TSI1' not in font:
+        raise VTTLibError("TSI1 table not found")
+    data = tobytes(data, encoding='utf-8')
+    data = b'\r'.join(data.splitlines()).rstrip() + b'\r'
     if is_glyph:
-        data = font['TSI1'].glyphPrograms[name]
+        font['TSI1'].glyphPrograms[name] = data
     else:
-        data = font['TSI1'].extraPrograms[name]
-    # normalize line endings as VTT somehow uses Macintosh-style CR...
-    return "\n".join(data.splitlines())
+        font['TSI1'].extraPrograms[name] = data
 
 
 def set_components(glyph, vtt_components, glyph_order):
@@ -213,6 +249,37 @@ def set_components(glyph, vtt_components, glyph_order):
             comp.flags |= ROUND_XY_TO_GRID
         else:
             comp.flags &= ~ROUND_XY_TO_GRID
+
+
+def update_composite_info(font, vtt_version=6):
+    glyph_order = font.getGlyphOrder()
+    glyf_table = font['glyf']
+    for glyph_name in glyph_order:
+        glyph = glyf_table[glyph_name]
+        if not glyph.isComposite():
+            continue
+        data = get_glyph_assembly(font, glyph_name)
+        # strip existing components data
+        data = composite_info_RE.sub("", data).lstrip()
+        instructions = []
+        for comp in glyph.components:
+            if comp.flags & USE_MY_METRICS:
+                instructions.append("USEMYMETRICS[]\n")
+            if vtt_version >= 6:
+                if comp.flags & SCALED_COMPONENT_OFFSET:
+                    instructions.append("SCALEDCOMPONENTOFFSET[]\n")
+                if comp.flags & UNSCALED_COMPONENT_OFFSET:
+                    instructions.append("UNSCALEDCOMPONENTOFFSET[]\n")
+            index = glyph_order.index(comp.glyphName)
+            if hasattr(comp, 'firstPt'):
+                instructions.append("ANCHOR[], %d, %d, %d\n"
+                                    % (index, comp.firstPt, comp.secondPt))
+            else:
+                flag = "R" if comp.flags & ROUND_XY_TO_GRID else "r"
+                instructions.append(
+                    "OFFSET[%s], %d, %d, %d\n" % (flag, index, comp.x, comp.y))
+        new_data = "".join(instructions) + "\n" + data
+        set_glyph_assembly(font, glyph_name, new_data)
 
 
 def compile_instructions(font, ship=True):
