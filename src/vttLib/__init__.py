@@ -17,12 +17,12 @@ from fontTools.ttLib.tables._g_l_y_f import (
 
 _use_my_metrics = r"^USEMYMETRICS\[\][\r\n]?"
 _overlap = r"^OVERLAP\[\][\r\n]?"
-_unscaled_component_offset = r"^UNSCALEDCOMPONENTOFFSET\[\][\r\n]?"
+_scaled_component_offset = r"^(?:UN)?SCALEDCOMPONENTOFFSET\[\][\r\n]?"
 _anchor = r"^ANCHOR\[\](?:, *-?[0-9]+){3}[\r\n]?"
 _offset = r"^OFFSET\[[rR]\](?:, *-?[0-9]+){3}[\r\n]?"
 composite_info_RE = re.compile(
     "(%s)|(%s)|(%s)|(%s)|(%s)" % (
-        _use_my_metrics, _overlap, _unscaled_component_offset, _anchor, _offset
+        _use_my_metrics, _overlap, _scaled_component_offset, _anchor, _offset
     ), re.MULTILINE
 )
 
