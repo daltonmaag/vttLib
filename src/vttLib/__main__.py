@@ -1,6 +1,6 @@
 from __future__ import print_function, division, absolute_import
 import sys
-from fontTools.ttLib import TTFont, TTLibError
+from fontTools.ttLib import TTFont
 from fontTools.ttx import makeOutputFileName
 from vttLib import (
     VTTLibInvalidComposite, VTTLibError, compile_instructions,
