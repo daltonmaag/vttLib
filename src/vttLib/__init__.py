@@ -31,6 +31,10 @@ class VTTLibError(TTLibError):
     pass
 
 
+class VTTLibInvalidComposite(VTTLibError):
+    pass
+
+
 def set_cvt_table(font, data):
     data = re.sub(r"/\*.*?\*/", "", data, flags=re.DOTALL)
     values = array.array(tostr("h"))
@@ -48,7 +52,12 @@ def set_cvt_table(font, data):
         font["cvt "].values = values
 
 
-Component = namedtuple('Component', 'index x y round_to_grid use_my_metrics')
+OffsetComponent = namedtuple('OffsetComponent', [
+    'index', 'x', 'y', 'round_to_grid', 'use_my_metrics',
+    'scaled_offset'])
+AnchorComponent = namedtuple('AnchorComponent', [
+    'index', 'first', 'second', 'use_my_metrics',
+    'scaled_offset'])
 
 
 def transform_assembly(data, components=None):
@@ -62,6 +71,7 @@ def transform_assembly(data, components=None):
         components = []
     round_to_grid = False
     use_my_metrics = False
+    scaled_offset = None
     for t in tokens:
         mnemonic = t.mnemonic
 
@@ -71,13 +81,28 @@ def transform_assembly(data, components=None):
         elif mnemonic == "USEMYMETRICS":
             use_my_metrics = True
             continue
+        elif mnemonic == "SCALEDCOMPONENTOFFSET":
+            scaled_offset = True
+            continue
+        elif mnemonic == "UNSCALEDCOMPONENTOFFSET":
+            scaled_offset = False
+            continue
         elif mnemonic == "OFFSET":
             round_to_grid = t.flags == '1'
             index, x, y = t.stack_items
-            component = Component(index, x, y, round_to_grid, use_my_metrics)
+            component = OffsetComponent(
+                index, x, y, round_to_grid, use_my_metrics, scaled_offset)
             components.append(component)
             use_my_metrics = round_to_grid = False
+            scaled_offset = None
             continue
+        elif mnemonic == "ANCHOR":
+            index, first, second = t.stack_items
+            component = AnchorComponent(
+                index, first, second, use_my_metrics, scaled_offset)
+            components.append(component)
+            use_my_metrics = False
+            scaled_offset = None
 
         elif mnemonic == "#PUSHON":
             push_on = True
@@ -234,21 +259,74 @@ def _set_assembly(font, name, data, is_glyph=False):
         font['TSI1'].extraPrograms[name] = data
 
 
-def set_components(glyph, vtt_components, glyph_order):
-    assert len(vtt_components) == len(glyph.components)
+def check_composite_info(name, glyph, vtt_components, glyph_order):
+    n_glyf_comps = len(glyph.components)
+    n_vtt_comps = len(vtt_components)
+    if n_vtt_comps != n_glyf_comps:
+        raise VTTLibInvalidComposite(
+            "'%s' has incorrect number of components: expected %d, "
+            "found %d." % (name, n_glyf_comps, n_vtt_comps))
     for i, comp in enumerate(glyph.components):
         vttcomp = vtt_components[i]
         base_name = comp.glyphName
-        assert vttcomp.index == glyph_order.index(base_name)
-        assert (comp.x, comp.y) == (vttcomp.x, vttcomp.y)
-        if vttcomp.use_my_metrics:
-            comp.flags |= USE_MY_METRICS
+        index = glyph_order.index(base_name)
+        if vttcomp.index != index:
+            raise VTTLibInvalidComposite(
+                "Component %d in '%s' has incorrect index: "
+                "expected %d, found %d." % (i, name, index, vttcomp.index))
+        if hasattr(comp, 'firstPt'):
+            if not hasattr(vttcomp, 'first') and hasattr(vttcomp, 'x'):
+                raise VTTLibInvalidComposite(
+                    "Component %d in '%s' has incorrect type: "
+                    "expected ANCHOR[], found OFFSET[]." % (i, name))
+            if comp.firstPt != vttcomp.first:
+                raise VTTLibInvalidComposite(
+                    "Component %d in '%s' has wrong anchor point: expected"
+                    " %d, found %d." % (i, name, comp.firstPt, vttcomp.first))
+            if comp.secondPt != vttcomp.second:
+                raise VTTLibInvalidComposite(
+                    "Component %d in '%s' has wrong anchor point: expected"
+                    " %d, found %d." % (i, name, comp.secondPt, vttcomp.second))
         else:
-            comp.flags &= ~USE_MY_METRICS
-        if vttcomp.round_to_grid:
-            comp.flags |= ROUND_XY_TO_GRID
-        else:
-            comp.flags &= ~ROUND_XY_TO_GRID
+            assert hasattr(comp, 'x')
+            if not hasattr(vttcomp, 'x') and hasattr(vttcomp, 'first'):
+                raise VTTLibInvalidComposite(
+                    "Component %d in '%s' has incorrect type: "
+                    "expected OFFSET[], found ANCHOR[]." % (i, name))
+            if comp.x != vttcomp.x:
+                raise VTTLibInvalidComposite(
+                    "Component %d in '%s' has wrong x offset: expected"
+                    " %d, found %d." % (i, name, comp.x, vttcomp.x))
+            if comp.y != vttcomp.y:
+                raise VTTLibInvalidComposite(
+                    "Component %d in '%s' has wrong y offset: expected"
+                    " %d, found %d." % (i, name, comp.y, vttcomp.y))
+            if ((comp.flags & ROUND_XY_TO_GRID and
+                    not vttcomp.round_to_grid) or
+                    (not comp.flags & ROUND_XY_TO_GRID and
+                     vttcomp.round_to_grid)):
+                raise VTTLibInvalidComposite(
+                    "Component %d in '%s' has wrong 'ROUND_XY_TO_GRID' flag."
+                    % (i, name))
+        if ((comp.flags & USE_MY_METRICS and not vttcomp.use_my_metrics) or
+                (not comp.flags & USE_MY_METRICS and vttcomp.use_my_metrics)):
+            raise VTTLibInvalidComposite(
+                "Component %d in '%s' has wrong 'USE_MY_METRICS' flag."
+                % (i, name))
+        if ((comp.flags & SCALED_COMPONENT_OFFSET and
+                not vttcomp.scaled_offset) or
+                (not comp.flags & SCALED_COMPONENT_OFFSET and
+                 vttcomp.scaled_offset)):
+            raise VTTLibInvalidComposite(
+                "Component %d in '%s' has wrong 'SCALED_COMPONENT_OFFSET' flag."
+                % (i, name))
+        if ((comp.flags & UNSCALED_COMPONENT_OFFSET and
+                not vttcomp.scaled_offset) or
+                (not comp.flags & UNSCALED_COMPONENT_OFFSET and
+                 vttcomp.scaled_offset)):
+            raise VTTLibInvalidComposite(
+                "Component %d in '%s' has wrong 'UNSCALED_COMPONENT_OFFSET' flag."
+                "flag" % (i, name))
 
 
 def update_composite_info(font, vtt_version=6):
@@ -308,7 +386,8 @@ def compile_instructions(font, ship=True):
         if program or components:
             glyph = glyf_table[glyph_name]
             if components:
-                set_components(glyph, components, glyph_order)
+                check_composite_info(
+                    glyph_name, glyph, components, glyph_order)
             if program:
                 glyph.program = program
 
