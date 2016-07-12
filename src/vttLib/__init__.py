@@ -329,7 +329,7 @@ def check_composite_info(name, glyph, vtt_components, glyph_order):
                 "flag" % (i, name))
 
 
-def update_composite_info(font, vtt_version=6):
+def update_composites(font, vtt_version=6):
     glyph_order = font.getGlyphOrder()
     glyf_table = font['glyf']
     for glyph_name in glyph_order:

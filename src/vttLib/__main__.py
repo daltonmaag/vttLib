@@ -4,7 +4,7 @@ from fontTools.ttLib import TTFont, TTLibError
 from fontTools.ttx import makeOutputFileName
 from vttLib import (
     VTTLibInvalidComposite, VTTLibError, compile_instructions,
-    update_composite_info,
+    update_composites,
 )
 import argparse
 
@@ -40,7 +40,7 @@ def main(args=None):
 
     try:
         if options.update_composites:
-            update_composite_info(font)
+            update_composites(font)
         try:
             compile_instructions(font, ship=options.ship)
         except VTTLibInvalidComposite as e:
