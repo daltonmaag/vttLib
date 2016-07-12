@@ -52,7 +52,7 @@ def main(args=None):
                     "'glyf' table:\n%s\nTry running with --update-composites"
                     " option." % e)
     except VTTLibError as e:
-        print(e, file=sys.stderr)
+        print("ERROR:", e, file=sys.stderr)
         sys.exit(1)
     else:
         font.save(options.outfile)
