@@ -329,10 +329,12 @@ def check_composite_info(name, glyph, vtt_components, glyph_order):
                 "flag" % (i, name))
 
 
-def update_composites(font, vtt_version=6):
+def update_composites(font, glyphs=None, vtt_version=6):
     glyph_order = font.getGlyphOrder()
+    if glyphs is None:
+        glyphs = glyph_order
     glyf_table = font['glyf']
-    for glyph_name in glyph_order:
+    for glyph_name in glyphs:
         glyph = glyf_table[glyph_name]
         if not glyph.isComposite():
             continue
