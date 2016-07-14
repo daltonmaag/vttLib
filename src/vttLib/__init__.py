@@ -329,6 +329,28 @@ def check_composite_info(name, glyph, vtt_components, glyph_order):
                 "flag" % (i, name))
 
 
+def write_composite_info(glyph, glyph_order, data="", vtt_version=6):
+    data = composite_info_RE.sub("", data).lstrip()
+    instructions = []
+    for comp in glyph.components:
+        if comp.flags & USE_MY_METRICS:
+            instructions.append("USEMYMETRICS[]\n")
+        if vtt_version >= 6:
+            if comp.flags & SCALED_COMPONENT_OFFSET:
+                instructions.append("SCALEDCOMPONENTOFFSET[]\n")
+            if comp.flags & UNSCALED_COMPONENT_OFFSET:
+                instructions.append("UNSCALEDCOMPONENTOFFSET[]\n")
+        index = glyph_order.index(comp.glyphName)
+        if hasattr(comp, 'firstPt'):
+            instructions.append("ANCHOR[], %d, %d, %d\n"
+                                % (index, comp.firstPt, comp.secondPt))
+        else:
+            flag = "R" if comp.flags & ROUND_XY_TO_GRID else "r"
+            instructions.append(
+                "OFFSET[%s], %d, %d, %d\n" % (flag, index, comp.x, comp.y))
+    return "".join(instructions) + "\n" + data
+
+
 def update_composites(font, glyphs=None, vtt_version=6):
     glyph_order = font.getGlyphOrder()
     if glyphs is None:
@@ -339,26 +361,7 @@ def update_composites(font, glyphs=None, vtt_version=6):
         if not glyph.isComposite():
             continue
         data = get_glyph_assembly(font, glyph_name)
-        # strip existing components data
-        data = composite_info_RE.sub("", data).lstrip()
-        instructions = []
-        for comp in glyph.components:
-            if comp.flags & USE_MY_METRICS:
-                instructions.append("USEMYMETRICS[]\n")
-            if vtt_version >= 6:
-                if comp.flags & SCALED_COMPONENT_OFFSET:
-                    instructions.append("SCALEDCOMPONENTOFFSET[]\n")
-                if comp.flags & UNSCALED_COMPONENT_OFFSET:
-                    instructions.append("UNSCALEDCOMPONENTOFFSET[]\n")
-            index = glyph_order.index(comp.glyphName)
-            if hasattr(comp, 'firstPt'):
-                instructions.append("ANCHOR[], %d, %d, %d\n"
-                                    % (index, comp.firstPt, comp.secondPt))
-            else:
-                flag = "R" if comp.flags & ROUND_XY_TO_GRID else "r"
-                instructions.append(
-                    "OFFSET[%s], %d, %d, %d\n" % (flag, index, comp.x, comp.y))
-        new_data = "".join(instructions) + "\n" + data
+        new_data = write_composite_info(glyph, glyph_order, data, vtt_version)
         set_glyph_assembly(font, glyph_name, new_data)
 
 
