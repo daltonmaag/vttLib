@@ -2,7 +2,7 @@ from __future__ import (
     print_function, division, absolute_import, unicode_literals)
 import re
 import array
-from collections import deque, namedtuple
+from collections import deque, namedtuple, OrderedDict
 
 from .parser import AssemblyParser, ParseException
 
@@ -137,13 +137,19 @@ def transform_assembly(data, components=None):
             assert n > 0
             stack = stream[push_indexes[-1]]
             stack.appendleft(n)
+
+            deltas = OrderedDict()
             for point_index, rel_ppem, step_no in reversed(t.deltas):
-                if mnemonic.startswith(("DELTAP", "DELTAC")):
-                    rel_ppem -= 9  # subtract the default 'delta base'
-                stack.appendleft(point_index)
-                # -8: 0, ... -1: 7, 1: 8, ... 8: 15
-                selector = (step_no + 7) if step_no > 0 else (step_no + 8)
-                stack.appendleft((rel_ppem << 4) | selector)
+                deltas.setdefault(point_index, []).append((rel_ppem, step_no))
+
+            for point_index, delta_specs in deltas.items():
+                for rel_ppem, step_no in sorted(delta_specs, reverse=True):
+                    if mnemonic.startswith(("DELTAP", "DELTAC")):
+                        rel_ppem -= 9  # subtract the default 'delta base'
+                    stack.appendleft(point_index)
+                    # -8: 0, ... -1: 7, 1: 8, ... 8: 15
+                    selector = (step_no + 7) if step_no > 0 else (step_no + 8)
+                    stack.appendleft((rel_ppem << 4) | selector)
             if mnemonic.startswith("DLT"):
                 mnemonic = mnemonic.replace("DLT", "DELTA")
         else:
