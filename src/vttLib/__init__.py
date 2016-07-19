@@ -336,7 +336,15 @@ def check_composite_info(name, glyph, vtt_components, glyph_order):
 
 
 def write_composite_info(glyph, glyph_order, data="", vtt_version=6):
-    data = composite_info_RE.sub("", data).lstrip()
+    head = ""
+    last = 0
+    for m in composite_info_RE.finditer(data):
+        start, end = m.span()
+        head += data[last:start]
+        last = end
+    tail = ""
+    if last < len(data):
+        tail += data[last:]
     instructions = []
     for comp in glyph.components:
         if comp.flags & USE_MY_METRICS:
@@ -354,7 +362,7 @@ def write_composite_info(glyph, glyph_order, data="", vtt_version=6):
             flag = "R" if comp.flags & ROUND_XY_TO_GRID else "r"
             instructions.append(
                 "OFFSET[%s], %d, %d, %d\n" % (flag, index, comp.x, comp.y))
-    return "".join(instructions) + "\n" + data
+    return head + "".join(instructions) + tail
 
 
 def update_composites(font, glyphs=None, vtt_version=6):
