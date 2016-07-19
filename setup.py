@@ -30,6 +30,11 @@ setup_params = dict(
     tests_require=[
         'pytest>=2.8',
     ],
+    entry_points={
+        'console_scripts': [
+            "vttdump = vttLib.vttdump:main",
+        ]
+    },
 )
 
 
