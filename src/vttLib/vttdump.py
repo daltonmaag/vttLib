@@ -16,7 +16,7 @@ except:
     ufonormalizer = None
 
 
-TTX_DATA_FOLDER = "org.fonttools.ttx"
+TTX_DATA_FOLDER = "com.github.fonttools.ttx"
 VTT_TABLES = ["TSI0", "TSI1", "TSI2", "TSI3", "TSI5"]
 MAXP_KEY = 'com.robofont.robohint.maxp'
 MAXP_ATTRS = {
