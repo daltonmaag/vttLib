@@ -1,12 +1,17 @@
 from __future__ import (
     print_function, division, absolute_import, unicode_literals)
 import re
+import os
+import errno
 import array
+import shutil
 from collections import deque, namedtuple, OrderedDict
+import logging
+import plistlib
 
-from .parser import AssemblyParser, ParseException
+from vttLib.parser import AssemblyParser, ParseException
 
-from fontTools.ttLib import newTable, TTLibError
+from fontTools.ttLib import TTFont, newTable, TTLibError, tagToIdentifier
 from fontTools.ttLib.tables.ttProgram import Program
 from fontTools.misc.py23 import StringIO, tobytes, tounicode, tostr
 from fontTools.ttLib.tables._g_l_y_f import (
@@ -14,17 +19,54 @@ from fontTools.ttLib.tables._g_l_y_f import (
     SCALED_COMPONENT_OFFSET,
 )
 
+try:
+    import ufonormalizer
+except:
+    ufonormalizer = None
 
-_use_my_metrics = r"^USEMYMETRICS\[\][\r\n]?"
-_overlap = r"^OVERLAP\[\][\r\n]?"
-_scaled_component_offset = r"^(?:UN)?SCALEDCOMPONENTOFFSET\[\][\r\n]?"
-_anchor = r"^ANCHOR\[\](?:, *-?[0-9]+){3}[\r\n]?"
-_offset = r"^OFFSET\[[rR]\](?:, *-?[0-9]+){3}[\r\n]?"
-composite_info_RE = re.compile(
-    "(%s)|(%s)|(%s)|(%s)|(%s)" % (
-        _use_my_metrics, _overlap, _scaled_component_offset, _anchor, _offset
-    ), re.MULTILINE
-)
+
+if hasattr(plistlib, "load"):
+    # PY3
+    _plist_load = plistlib.load
+    _plist_dump = plistlib.dump
+else:
+    # PY2
+    _plist_load = plistlib.readPlist
+    _plist_dump = plistlib.writePlist
+
+
+def read_plist(path, default=None):
+    try:
+        with open(path, 'rb') as fp:
+            return _plist_load(fp)
+    except IOError as e:
+        if e.errno != errno.ENOENT or default is None:
+            raise
+        return default
+
+
+def write_plist(value, path):
+    with open(path, 'wb') as fp:
+        _plist_dump(value, fp)
+
+
+log = logging.getLogger(__name__)
+
+
+VTT_TABLES = ["TSI0", "TSI1", "TSI2", "TSI3", "TSI5"]
+TTX_DATA_FOLDER = "com.github.fonttools.ttx"
+MAXP_KEY = 'com.robofont.robohint.maxp'
+MAXP_ATTRS = {
+    'maxZones',
+    'maxTwilightPoints',
+    'maxStorage',
+    'maxFunctionDefs',
+    'maxInstructionDefs',
+    'maxStackElements',
+    'maxSizeOfInstructions',
+}
+MAXP_KEY_LEN = len(MAXP_KEY) + 1  # includes the '.'
+MAXP_SUB_KEYS = set(MAXP_KEY + '.' + k for k in MAXP_ATTRS)
 
 
 class VTTLibError(TTLibError):
@@ -32,6 +74,10 @@ class VTTLibError(TTLibError):
 
 
 class VTTLibInvalidComposite(VTTLibError):
+    pass
+
+
+class VTTLibArgumentError(VTTLibError):
     pass
 
 
@@ -223,46 +269,64 @@ def make_glyph_program(vtt_assembly, name=None):
     return program, components
 
 
-def get_extra_assembly(font, tag):
-    if tag not in ("cvt", "cvt ", "prep", "ppgm", "fpgm"):
-        raise ValueError("Invalid tag: %r" % tag)
-    if tag == "prep":
-        tag = "ppgm"
-    return _get_assembly(font, tag.strip())
+def get_extra_assembly(font, name):
+    if name not in ("cvt", "cvt ", "prep", "ppgm", "fpgm"):
+        raise ValueError("Invalid name: %r" % name)
+    if name == "prep":
+        name = "ppgm"
+    return get_vtt_program(font, name.strip())
 
 
 def get_glyph_assembly(font, name):
-    return _get_assembly(font, name, is_glyph=True)
+    return get_vtt_program(font, name, is_glyph=True)
 
 
-def _get_assembly(font, name, is_glyph=False):
-    if 'TSI1' not in font:
-        raise VTTLibError("TSI1 table not found")
+def get_glyph_talk(font, name):
+    return get_vtt_program(font, name, is_talk=True, is_glyph=True)
+
+
+def get_vtt_program(font, name, is_talk=False, is_glyph=False):
+    tag = "TSI3" if is_talk else "TSI1"
+    if tag not in font:
+        raise VTTLibError("%s table not found" % tag)
     try:
         if is_glyph:
-            data = font['TSI1'].glyphPrograms[name]
+            data = font[tag].glyphPrograms[name]
         else:
-            data = font['TSI1'].extraPrograms[name]
+            data = font[tag].extraPrograms[name]
     except KeyError:
-        raise VTTLibError(
-            "%s program missing from TSI1: '%s'" % (
-                "Glyph" if is_glyph else "Extra", name))
+        raise KeyError(
+            "%s program missing from %s: '%s'" % (
+                "Glyph" if is_glyph else "Extra", tag, name))
     return tounicode(data.replace(b"\r", b"\n"), encoding='utf-8')
 
 
+def set_extra_assembly(font, name, data):
+    if name not in ("cvt", "cvt ", "prep", "ppgm", "fpgm"):
+        raise ValueError("Invalid name: %r" % name)
+    if name == "prep":
+        name = "ppgm"
+    set_vtt_program(font, name, data)
+
+
 def set_glyph_assembly(font, name, data):
-    _set_assembly(font, name, data, is_glyph=True)
+    set_vtt_program(font, name, data, is_glyph=True)
 
 
-def _set_assembly(font, name, data, is_glyph=False):
-    if 'TSI1' not in font:
-        raise VTTLibError("TSI1 table not found")
+def set_glyph_talk(font, name, data):
+    return set_vtt_program(font, name, data, is_talk=True, is_glyph=True)
+
+
+def set_vtt_program(font, name, data, is_talk=False, is_glyph=False):
+    tag = "TSI3" if is_talk else "TSI1"
+    if tag not in font:
+        raise VTTLibError("%s table not found" % tag)
     data = tobytes(data, encoding='utf-8')
     data = b'\r'.join(data.splitlines()).rstrip() + b'\r'
     if is_glyph:
-        font['TSI1'].glyphPrograms[name] = data
+        font[tag].glyphPrograms[name] = data
     else:
-        font['TSI1'].extraPrograms[name] = data
+        font[tag].extraPrograms[name] = data
 
 
 def check_composite_info(name, glyph, vtt_components, glyph_order):
@@ -333,6 +397,18 @@ def check_composite_info(name, glyph, vtt_components, glyph_order):
             raise VTTLibInvalidComposite(
                 "Component %d in '%s' has wrong 'UNSCALED_COMPONENT_OFFSET' flag."
                 "flag" % (i, name))
+
+
+_use_my_metrics = r"^USEMYMETRICS\[\][\r\n]?"
+_overlap = r"^OVERLAP\[\][\r\n]?"
+_scaled_component_offset = r"^(?:UN)?SCALEDCOMPONENTOFFSET\[\][\r\n]?"
+_anchor = r"^ANCHOR\[\](?:, *-?[0-9]+){3}[\r\n]?"
+_offset = r"^OFFSET\[[rR]\](?:, *-?[0-9]+){3}[\r\n]?"
+composite_info_RE = re.compile(
+    "(%s)|(%s)|(%s)|(%s)|(%s)" % (
+        _use_my_metrics, _overlap, _scaled_component_offset, _anchor, _offset
+    ), re.MULTILINE
+)
 
 
 def write_composite_info(glyph, glyph_order, data="", vtt_version=6):
@@ -414,3 +490,179 @@ def compile_instructions(font, ship=True):
         for tag in ("TSI%d" % i for i in (0, 1, 2, 3, 5)):
             if tag in font:
                 del font[tag]
+
+
+def read_maxp_data(ufo, ttfont):
+    lib = read_plist(os.path.join(ufo, "lib.plist"), default={})
+    maxp = ttfont['maxp']
+    found = False
+    for key in MAXP_SUB_KEYS:
+        if key in lib:
+            name = key[MAXP_KEY_LEN:]
+            value = lib[key]
+            setattr(maxp, name, value)
+            log.debug("maxp.%s = %s" % (name, value))
+            found = True
+    if not found:
+        log.debug("No 'maxp' values found in lib.plist")
+
+
+def write_maxp_data(font, ufo):
+    libfilename = os.path.join(ufo, "lib.plist")
+    lib = read_plist(libfilename, default={})
+    maxp = font['maxp']
+    for name in MAXP_ATTRS:
+        lib[MAXP_KEY + "." + name] = getattr(maxp, name)
+    write_plist(lib, libfilename)
+    if ufonormalizer:
+        ufonormalizer.normalizeLibPlist(ufo)
+
+
+comment_re = r'/\*%s\*/[\r\n]*'
+# strip the timestamps
+gui_generated_re = re.compile(comment_re % (r' GUI generated .*?'))
+vtt_compiler_re = re.compile(  # keep the VTT version
+    comment_re % (r' (VTT [0-9]+\.[0-9][0-9A-Z]* compiler) .*?'))
+# strip glyph indexes
+glyph_re = re.compile(comment_re % (r' (?:TT|VTTTalk) glyph [0-9]+.*?'))
+
+
+def normalize_vtt_programs(font):
+    for tag in ("cvt", "ppgm", "fpgm"):
+        program = get_extra_assembly(font, tag)
+        program = vtt_compiler_re.sub(r'/* \1 */\n', program)
+        set_extra_assembly(font, tag, program)
+
+    glyph_order = font.getGlyphOrder()
+    for name in glyph_order:
+        for is_talk in (True, False):
+            try:
+                program = get_vtt_program(font, name, is_talk, is_glyph=True)
+            except KeyError:
+                continue
+            if is_talk:
+                program = gui_generated_re.sub('', program)
+            program = vtt_compiler_re.sub(r'/* \1 */\r', program)
+            program = glyph_re.sub('', program)
+            set_vtt_program(font, name, program, is_talk, is_glyph=True)
+
+    if len(font['TSI3'].extraPrograms):
+        # VTT sometimes stores 'reserved' data in TSI3 which isn't needed
+        font['TSI3'].extraPrograms = {}
+
+
+def vtt_dump(infile, outfile=None, **kwargs):
+    if not os.path.exists(infile):
+        raise VTTLibArgumentError("'%s' not found" % infile)
+
+    font = TTFont(infile)
+
+    if font.sfntVersion not in ("\x00\x01\x00\x00", "true"):
+        raise VTTLibArgumentError("Not a TrueType font (bad sfntVersion)")
+    for table_tag in VTT_TABLES:
+        if table_tag not in font:
+            raise VTTLibArgumentError(
+                "Table '%s' not found in input font" % table_tag)
+
+    if not outfile:
+        ufo = os.path.splitext(infile)[0] + ".ufo"
+    else:
+        ufo = outfile
+    if not os.path.exists(ufo) or not os.path.isdir(ufo):
+        raise VTTLibArgumentError("No such directory: '%s'" % ufo)
+
+    try:
+        metainfo = read_plist(os.path.join(ufo, "metainfo.plist"))
+        ufo_version = int(metainfo["formatVersion"])
+    except (IOError, KeyError, ValueError) as e:
+        raise VTTLibArgumentError("Not a valid UFO file: %s" % e)
+    else:
+        if ufo_version < 3:
+            raise VTTLibArgumentError(
+                "Unsupported UFO format: %d" % ufo_version)
+
+    folder = os.path.join(ufo, "data", TTX_DATA_FOLDER)
+    # create data sub-folder if it doesn't exist already
+    try:
+        os.makedirs(folder)
+    except OSError as e:
+        if e.errno != errno.EEXIST or not os.path.isdir(folder):
+            raise
+
+    normalize_vtt_programs(font)
+
+    for tag in VTT_TABLES:
+        # dump each table individually instead of using 'splitTables'
+        # to avoid creating an extra index file
+        outfile = os.path.join(folder, tagToIdentifier(tag) + '.ttx')
+        font.saveXML(outfile, tables=[tag])
+
+    write_maxp_data(font, ufo)
+
+
+def vtt_merge(infile, outfile=None, **kwargs):
+    ufo = infile
+    if not os.path.exists(ufo) or not os.path.isdir(ufo):
+        raise VTTLibArgumentError("No such directory: '%s'" % ufo)
+    try:
+        metainfo = read_plist(os.path.join(ufo, "metainfo.plist"))
+        ufo_version = int(metainfo["formatVersion"])
+    except (IOError, KeyError, ValueError) as e:
+        raise VTTLibArgumentError("Not a valid UFO file: %s" % e)
+    else:
+        if ufo_version < 3:
+            raise VTTLibArgumentError(
+                "Unsupported UFO format: %d" % ufo_version)
+
+    if not outfile:
+        outfile = os.path.splitext(infile)[0] + ".ttf"
+    if not os.path.exists(outfile):
+        raise VTTLibArgumentError("'%s' not found" % outfile)
+
+    font = TTFont(outfile)
+    if font.sfntVersion not in ("\x00\x01\x00\x00", "true"):
+        raise VTTLibArgumentError("Not a TrueType font (bad sfntVersion)")
+
+    ttx_folder = os.path.join(ufo, "data", TTX_DATA_FOLDER)
+    for filename in os.listdir(ttx_folder):
+        if not filename.endswith(".ttx"):
+            continue
+        ttx = os.path.join(ttx_folder, filename)
+        font.importXML(ttx)
+
+    read_maxp_data(ufo, font)
+
+    font.save(outfile)
+
+
+def vtt_compile(infile, outfile=None, ship=False, inplace=None,
+                force_overwrite=False, do_update_composites=False, **kwargs):
+    font = TTFont(infile)
+
+    if outfile:
+        pass
+    elif inplace:
+        # create (and overwrite exising) backup first
+        shutil.copyfile(infile, infile + inplace)
+        outfile = infile
+    elif force_overwrite:
+        # save to input file (no backup)
+        outfile = infile
+    else:
+        # create new unique output file
+        from fontTools.ttx import makeOutputFileName
+        outfile = makeOutputFileName(infile, None, ".ttf")
+
+    if do_update_composites:
+        update_composites(font)
+    try:
+        compile_instructions(font, ship=ship)
+    except VTTLibInvalidComposite as e:
+        if do_update_composites:
+            raise VTTLibError("Unexpected error: %s" % e)
+        else:
+            raise VTTLibArgumentError(
+                "Composite glyphs data in VTT source don't match the "
+                "'glyf' table:\n%s\nTry running with --update-composites"
+                " option." % e)
+    font.save(outfile)
