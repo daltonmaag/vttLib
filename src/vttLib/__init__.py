@@ -438,7 +438,7 @@ def write_composite_info(glyph, glyph_order, data="", vtt_version=6):
             flag = "R" if comp.flags & ROUND_XY_TO_GRID else "r"
             instructions.append(
                 "OFFSET[%s], %d, %d, %d\n" % (flag, index, comp.x, comp.y))
-    return head + "".join(instructions) + tail
+    return head, "".join(instructions), tail
 
 
 def update_composites(font, glyphs=None, vtt_version=6):
@@ -451,7 +451,8 @@ def update_composites(font, glyphs=None, vtt_version=6):
         if not glyph.isComposite():
             continue
         data = get_glyph_assembly(font, glyph_name)
-        new_data = write_composite_info(glyph, glyph_order, data, vtt_version)
+        new_data = "".join(write_composite_info(
+            glyph, glyph_order, data, vtt_version))
         set_glyph_assembly(font, glyph_name, new_data)
 
 
