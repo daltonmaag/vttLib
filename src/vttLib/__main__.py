@@ -1,15 +1,25 @@
 from __future__ import print_function, division, absolute_import
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, _VersionAction
 import logging
 
 from vttLib import vtt_compile, vtt_dump, vtt_merge, VTTLibArgumentError
+
+
+class PkgVersionAction(_VersionAction):
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        import pkg_resources
+        self.version = pkg_resources.get_distribution("vttLib").version
+        super(PkgVersionAction, self).__call__(
+            parser, namespace, values, option_string)
 
 
 def main(args=None):
     parser = ArgumentParser(
         prog="python -m vttLib", description="Dump, merge or compile Visual "
         "TrueType data in UFO3 with FontTools")
+    parser.add_argument('--version', action=PkgVersionAction)
 
     parser_group = parser.add_subparsers(title="sub-commands")
 
@@ -59,10 +69,6 @@ def main(args=None):
         '-f', '--force-overwrite', action='store_true',
         help="overwrite existing input file (CAUTION!)")
 
-    parser_compile.add_argument(
-        '--update-composites', action='store_true', dest="do_update_composites",
-        help="synchronize indexes, flags and offsets of components in TSI1 "
-        "programs with the data from the 'glyf' table")
     parser_compile.add_argument(
         '--ship', action='store_true', help='remove all the TSI* tables from '
         'the output font.')
