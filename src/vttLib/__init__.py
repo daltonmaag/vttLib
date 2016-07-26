@@ -329,7 +329,8 @@ def set_vtt_program(font, name, data, is_talk=False, is_glyph=False):
         font[tag].extraPrograms[name] = data
 
 
-def check_composite_info(name, glyph, vtt_components, glyph_order):
+def check_composite_info(
+        name, glyph, vtt_components, glyph_order, check_flags=False):
     n_glyf_comps = len(glyph.components)
     n_vtt_comps = len(vtt_components)
     if n_vtt_comps != n_glyf_comps:
@@ -371,13 +372,16 @@ def check_composite_info(name, glyph, vtt_components, glyph_order):
                 raise VTTLibInvalidComposite(
                     "Component %d in '%s' has wrong y offset: expected"
                     " %d, found %d." % (i, name, comp.y, vttcomp.y))
-            if ((comp.flags & ROUND_XY_TO_GRID and
-                    not vttcomp.round_to_grid) or
+            if (check_flags and (
+                    (comp.flags & ROUND_XY_TO_GRID and
+                     not vttcomp.round_to_grid) or
                     (not comp.flags & ROUND_XY_TO_GRID and
-                     vttcomp.round_to_grid)):
+                     vttcomp.round_to_grid))):
                 raise VTTLibInvalidComposite(
                     "Component %d in '%s' has wrong 'ROUND_XY_TO_GRID' flag."
                     % (i, name))
+        if not check_flags:
+            continue
         if ((comp.flags & USE_MY_METRICS and not vttcomp.use_my_metrics) or
                 (not comp.flags & USE_MY_METRICS and vttcomp.use_my_metrics)):
             raise VTTLibInvalidComposite(
@@ -409,6 +413,28 @@ composite_info_RE = re.compile(
         _use_my_metrics, _overlap, _scaled_component_offset, _anchor, _offset
     ), re.MULTILINE
 )
+
+
+def set_components_flags(glyph, components, vtt_version=6):
+    assert len(components) == len(glyph.components)
+    for i, comp in enumerate(glyph.components):
+        vttcomp = components[i]
+        if vttcomp.use_my_metrics:
+            comp.flags |= USE_MY_METRICS
+        else:
+            comp.flags &= ~USE_MY_METRICS
+        if vttcomp.round_to_grid:
+            comp.flags |= ROUND_XY_TO_GRID
+        else:
+            comp.flags &= ~ROUND_XY_TO_GRID
+        if vtt_version < 6 or vttcomp.scaled_offset is None:
+            continue
+        if vttcomp.scaled_offset:
+            comp.flags |= SCALED_COMPONENT_OFFSET
+            comp.flags &= ~UNSCALED_COMPONENT_OFFSET
+        else:
+            comp.flags |= UNSCALED_COMPONENT_OFFSET
+            comp.flags &= ~SCALED_COMPONENT_OFFSET
 
 
 def write_composite_info(glyph, glyph_order, data="", vtt_version=6):
@@ -484,6 +510,7 @@ def compile_instructions(font, ship=True):
             if components:
                 check_composite_info(
                     glyph_name, glyph, components, glyph_order)
+                set_components_flags(glyph, components)
             if program:
                 glyph.program = program
 
@@ -637,7 +664,7 @@ def vtt_merge(infile, outfile=None, **kwargs):
 
 
 def vtt_compile(infile, outfile=None, ship=False, inplace=None,
-                force_overwrite=False, do_update_composites=False, **kwargs):
+                force_overwrite=False, **kwargs):
     font = TTFont(infile)
 
     if outfile:
@@ -654,16 +681,10 @@ def vtt_compile(infile, outfile=None, ship=False, inplace=None,
         from fontTools.ttx import makeOutputFileName
         outfile = makeOutputFileName(infile, None, ".ttf")
 
-    if do_update_composites:
-        update_composites(font)
     try:
         compile_instructions(font, ship=ship)
     except VTTLibInvalidComposite as e:
-        if do_update_composites:
-            raise VTTLibError("Unexpected error: %s" % e)
-        else:
-            raise VTTLibArgumentError(
-                "Composite glyphs data in VTT source don't match the "
-                "'glyf' table:\n%s\nTry running with --update-composites"
-                " option." % e)
+        raise VTTLibArgumentError(
+            "Composite glyphs data in VTT source don't match the "
+            "'glyf' table:\n%s" % e)
     font.save(outfile)
