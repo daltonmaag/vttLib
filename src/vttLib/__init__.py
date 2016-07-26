@@ -681,10 +681,5 @@ def vtt_compile(infile, outfile=None, ship=False, inplace=None,
         from fontTools.ttx import makeOutputFileName
         outfile = makeOutputFileName(infile, None, ".ttf")
 
-    try:
-        compile_instructions(font, ship=ship)
-    except VTTLibInvalidComposite as e:
-        raise VTTLibArgumentError(
-            "Composite glyphs data in VTT source don't match the "
-            "'glyf' table:\n%s" % e)
+    compile_instructions(font, ship=ship)
     font.save(outfile)
