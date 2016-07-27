@@ -11,7 +11,8 @@ import plistlib
 
 from vttLib.parser import AssemblyParser, ParseException
 
-from fontTools.ttLib import TTFont, newTable, TTLibError, tagToIdentifier
+from fontTools.ttLib import (
+    TTFont, newTable, TTLibError, tagToIdentifier, identifierToTag)
 from fontTools.ttLib.tables.ttProgram import Program
 from fontTools.misc.py23 import StringIO, tobytes, tounicode, tostr
 from fontTools.ttLib.tables._g_l_y_f import (
@@ -653,7 +654,13 @@ def vtt_merge(infile, outfile=None, **kwargs):
 
     ttx_folder = os.path.join(ufo, "data", TTX_DATA_FOLDER)
     for filename in os.listdir(ttx_folder):
-        if not filename.endswith(".ttx"):
+        name, ext = os.path.splitext(filename)
+        if ext != ".ttx":
+            continue
+        try:
+            if identifierToTag(name) not in VTT_TABLES:
+                continue
+        except:
             continue
         ttx = os.path.join(ttx_folder, filename)
         font.importXML(ttx)
