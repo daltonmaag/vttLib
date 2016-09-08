@@ -8,6 +8,7 @@ import shutil
 from collections import deque, namedtuple, OrderedDict
 import logging
 import plistlib
+import glob
 
 from vttLib.parser import AssemblyParser, ParseException
 
@@ -652,17 +653,15 @@ def vtt_merge(infile, outfile=None, **kwargs):
     if font.sfntVersion not in ("\x00\x01\x00\x00", "true"):
         raise VTTLibArgumentError("Not a TrueType font (bad sfntVersion)")
 
-    ttx_folder = os.path.join(ufo, "data", TTX_DATA_FOLDER)
-    for filename in os.listdir(ttx_folder):
-        name, ext = os.path.splitext(filename)
-        if ext != ".ttx":
-            continue
+    for ttx in glob.glob(os.path.join(ufo, "data", TTX_DATA_FOLDER, "*.ttx")):
+        identifier = os.path.splitext(os.path.basename(ttx))[0]
         try:
-            if identifierToTag(name) not in VTT_TABLES:
-                continue
+            tag = identifierToTag(identifier)
         except:
             continue
-        ttx = os.path.join(ttx_folder, filename)
+        else:
+            if tag not in VTT_TABLES:
+                continue
         font.importXML(ttx)
 
     read_maxp_data(ufo, font)
