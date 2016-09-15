@@ -581,6 +581,14 @@ def normalize_vtt_programs(font):
         font['TSI3'].extraPrograms = {}
 
 
+def add_new_glyphs_to_groups(font):
+    glyph_order = font.getGlyphOrder()
+    tsi5 = font['TSI5']
+    for glyph in glyph_order:
+        if glyph not in tsi5.glyphGrouping:
+            tsi5.glyphGrouping[glyph] = 0
+
+
 def vtt_dump(infile, outfile=None, **kwargs):
     if not os.path.exists(infile):
         raise VTTLibArgumentError("'%s' not found" % infile)
@@ -663,6 +671,8 @@ def vtt_merge(infile, outfile=None, **kwargs):
             if tag not in VTT_TABLES:
                 continue
         font.importXML(ttx)
+        if tag == "TSI5":
+            add_new_glyphs_to_groups(font)
 
     read_maxp_data(ufo, font)
 
