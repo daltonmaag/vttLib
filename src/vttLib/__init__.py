@@ -197,10 +197,10 @@ def transform_assembly(data, components=None):
                         if mnemonic.endswith("1"):
                             delta_base = 9
                         # DELTAC2 and DELTAP2: delta_base+16 to delta_base+31
-                        elif mnemonic.endswith("1"):
+                        elif mnemonic.endswith("2"):
                             delta_base = 25
                         # DELTAC3 and DELTAP3: delta_base+32 to delta_base+47
-                        elif mnemonic.endswith("1"):
+                        elif mnemonic.endswith("3"):
                             delta_base = 41
                         # subtract the default 'delta base'
                         rel_ppem -= delta_base
