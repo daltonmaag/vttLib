@@ -193,7 +193,17 @@ def transform_assembly(data, components=None):
             for point_index, delta_specs in deltas.items():
                 for rel_ppem, step_no in sorted(delta_specs, reverse=True):
                     if mnemonic.startswith(("DELTAP", "DELTAC")):
-                        rel_ppem -= 9  # subtract the default 'delta base'
+                        # DELTAC1 and DELTAP1: delta_base to delta_base+15
+                        if mnemonic.endswith("1"):
+                            delta_base = 9
+                        # DELTAC2 and DELTAP2: delta_base+16 to delta_base+31
+                        elif mnemonic.endswith("1"):
+                            delta_base = 25
+                        # DELTAC3 and DELTAP3: delta_base+32 to delta_base+47
+                        elif mnemonic.endswith("1"):
+                            delta_base = 41
+                        # subtract the default 'delta base'
+                        rel_ppem -= delta_base
                     stack.appendleft(point_index)
                     # -8: 0, ... -1: 7, 1: 8, ... 8: 15
                     selector = (step_no + 7) if step_no > 0 else (step_no + 8)
