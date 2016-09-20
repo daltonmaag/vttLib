@@ -488,7 +488,11 @@ def update_composites(font, glyphs=None, vtt_version=6):
         glyph = glyf_table[glyph_name]
         if not glyph.isComposite():
             continue
-        data = get_glyph_assembly(font, glyph_name)
+        try:
+            data = get_glyph_assembly(font, glyph_name)
+        except KeyError:
+            # the glyph is not in the TSI1 table; create a new one
+            data = ""
         new_data = "".join(write_composite_info(
             glyph, glyph_order, data, vtt_version))
         set_glyph_assembly(font, glyph_name, new_data)
