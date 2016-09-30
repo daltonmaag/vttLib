@@ -524,9 +524,16 @@ def compile_instructions(font, ship=True):
         if program or components:
             glyph = glyf_table[glyph_name]
             if components:
-                check_composite_info(
-                    glyph_name, glyph, components, glyph_order)
-                set_components_flags(glyph, components)
+                if not glyph.isComposite():
+                    log.warning(
+                        "Glyph '%s' contains components in VTT assembly but "
+                        "not in glyf table; drop assembly and skip "
+                        "compilation" % glyph_name)
+                    set_glyph_assembly(font, glyph_name, "")
+                else:
+                    check_composite_info(
+                        glyph_name, glyph, components, glyph_order)
+                    set_components_flags(glyph, components)
             if program:
                 glyph.program = program
 
