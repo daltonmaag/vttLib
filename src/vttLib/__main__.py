@@ -82,7 +82,7 @@ def main(args=None):
     logging.basicConfig(
         level=("ERROR" if options.quiet else
                "DEBUG" if options.verbose else "INFO"),
-        format="%(message)s")
+        format="%(name)s: %(levelname)s: %(message)s")
 
     try:
         options.func(**vars(options))
