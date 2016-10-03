@@ -109,6 +109,10 @@ AnchorComponent = namedtuple('AnchorComponent', [
 
 
 def transform_assembly(data, components=None):
+    data = data.strip()
+    if not data:
+        # input data just contains empty whitespace; skip it
+        return ""
     tokens = AssemblyParser.parseString(data, parseAll=True)
 
     push_on = True
@@ -486,13 +490,24 @@ def update_composites(font, glyphs=None, vtt_version=6):
     glyf_table = font['glyf']
     for glyph_name in glyphs:
         glyph = glyf_table[glyph_name]
-        if not glyph.isComposite():
-            continue
+        vtt_components = []
         try:
             data = get_glyph_assembly(font, glyph_name)
         except KeyError:
             # the glyph is not in the TSI1 table; create a new one
             data = ""
+        else:
+            # found glyph in TSI1 table; check it contains any VTT components;
+            # 'vtt_components' list is updated in place; we don't care about
+            # the return value (i.e. transformed FontTools assembly) here
+            transform_assembly(data, vtt_components)
+        if not glyph.isComposite():
+            if vtt_components:
+                log.warning(
+                    "Glyph '%s' contains components in VTT assembly but not"
+                    "in glyf table; drop assembly" % glyph_name)
+                set_glyph_assembly(font, glyph_name, "")
+            continue
         new_data = "".join(write_composite_info(
             glyph, glyph_order, data, vtt_version))
         set_glyph_assembly(font, glyph_name, new_data)
