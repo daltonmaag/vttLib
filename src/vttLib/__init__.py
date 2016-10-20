@@ -661,7 +661,8 @@ def vtt_dump(infile, outfile=None, **kwargs):
         # dump each table individually instead of using 'splitTables'
         # to avoid creating an extra index file
         outfile = os.path.join(folder, tagToIdentifier(tag) + '.ttx')
-        font.saveXML(outfile, tables=[tag])
+        # always use Unix LF newlines
+        font.saveXML(outfile, tables=[tag], newlinestr='\n')
 
     write_maxp_data(font, ufo)
 
