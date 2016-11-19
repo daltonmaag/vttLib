@@ -500,7 +500,14 @@ def update_composites(font, glyphs=None, vtt_version=6):
             # found glyph in TSI1 table; check it contains any VTT components;
             # 'vtt_components' list is updated in place; we don't care about
             # the return value (i.e. transformed FontTools assembly) here
-            transform_assembly(data, vtt_components)
+            try:
+                transform_assembly(data, vtt_components)
+            except ParseException as e:
+                import sys
+                sys.stderr.write(
+                    'An error occurred while parsing "%s" program:\n' % glyph_name)
+                sys.stderr.write(e.markInputline() + "\n\n")
+                raise VTTLibError(e)
         if not glyph.isComposite():
             if vtt_components:
                 log.warning(
