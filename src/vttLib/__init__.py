@@ -261,15 +261,16 @@ def pformat_tti(program, preserve=False):
     return stream.getvalue()
 
 
+def log_program_error(name, error):
+    log.error('An error occurred while parsing %sprogram:\n%s\n\n'
+        % ('"%s" ' % name if name else "", error.markInputline()))
+
+
 def make_program(vtt_assembly, name=None, components=None):
     try:
         ft_assembly = transform_assembly(vtt_assembly, components)
     except ParseException as e:
-        import sys
-        if name:
-            sys.stderr.write(
-                'An error occurred while parsing "%s" program:\n' % name)
-        sys.stderr.write(e.markInputline() + "\n\n")
+        log_program_error(name, e)
         raise VTTLibError(e)
     program = Program()
     program.fromAssembly(ft_assembly)
@@ -503,10 +504,7 @@ def update_composites(font, glyphs=None, vtt_version=6):
             try:
                 transform_assembly(data, vtt_components)
             except ParseException as e:
-                import sys
-                sys.stderr.write(
-                    'An error occurred while parsing "%s" program:\n' % glyph_name)
-                sys.stderr.write(e.markInputline() + "\n\n")
+                log_program_error(name, e)
                 raise VTTLibError(e)
         if not glyph.isComposite():
             if vtt_components:
