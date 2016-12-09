@@ -27,13 +27,6 @@ except:
     ufonormalizer = None
 
 
-try:
-    FileNotFoundError  # only defined on PY3
-except NameError:
-    class FileNotFoundError(IOError):
-        pass
-
-
 if hasattr(plistlib, "load"):
     # PY3
     _plist_load = plistlib.load
@@ -630,7 +623,7 @@ def read_ufo_contents(ufopath):
     for name, filename in contents.items():
         fullfilename = os.path.join(glyphs_dir, filename)
         if not os.path.isfile(fullfilename):
-            raise FileNotFoundError(
+            raise ValueError(
                 "contents.plist references a file that does not exist: %s"
                 % fullfilename)
     return contents
