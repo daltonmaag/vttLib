@@ -27,6 +27,13 @@ except:
     ufonormalizer = None
 
 
+try:
+    FileNotFoundError  # only defined on PY3
+except NameError:
+    class FileNotFoundError(IOError):
+        pass
+
+
 if hasattr(plistlib, "load"):
     # PY3
     _plist_load = plistlib.load
@@ -617,6 +624,31 @@ def normalize_vtt_programs(font):
         font['TSI3'].extraPrograms = {}
 
 
+def read_ufo_contents(ufopath):
+    glyphs_dir = os.path.join(ufopath, "glyphs")
+    contents = read_plist(os.path.join(glyphs_dir, "contents.plist"))
+    for name, filename in contents.items():
+        fullfilename = os.path.join(glyphs_dir, filename)
+        if not os.path.isfile(fullfilename):
+            raise FileNotFoundError(
+                "contents.plist references a file that does not exist: %s"
+                % fullfilename)
+    return contents
+
+
+def subset_vtt_glyph_programs(font, glyph_names):
+    for tag in ("TSI1", "TSI3"):
+        programs = font[tag].glyphPrograms
+        for name in list(programs.keys()):
+            if name not in glyph_names:
+                del programs[name]
+
+    groups = font["TSI5"].glyphGrouping
+    for name in list(groups.keys()):
+        if name not in glyph_names:
+            del groups[name]
+
+
 def vtt_dump(infile, outfile=None, **kwargs):
     if not os.path.exists(infile):
         raise VTTLibArgumentError("'%s' not found" % infile)
@@ -656,6 +688,9 @@ def vtt_dump(infile, outfile=None, **kwargs):
             raise
 
     normalize_vtt_programs(font)
+
+    ufo_contents = read_ufo_contents(ufo)
+    subset_vtt_glyph_programs(font, list(ufo_contents))
 
     for tag in VTT_TABLES:
         # dump each table individually instead of using 'splitTables'
