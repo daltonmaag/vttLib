@@ -600,7 +600,11 @@ glyph_re = re.compile(comment_re % (r' (?:TT|VTTTalk) glyph [0-9]+.*?'))
 
 def normalize_vtt_programs(font):
     for tag in ("cvt", "ppgm", "fpgm"):
-        program = get_extra_assembly(font, tag)
+        try:
+            program = get_extra_assembly(font, tag)
+        except KeyError:
+            # extra program missing; nothing to normalize
+            continue
         program = vtt_compiler_re.sub(r'/* \1 */\n', program)
         set_extra_assembly(font, tag, program)
 
