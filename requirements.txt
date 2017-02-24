@@ -1,4 +1,2 @@
-# install FontTools from github (the released version on PyPI is too old)
-git+https://github.com/behdad/fonttools.git@efb8642366eef06ab482473793136ecba679f35a
-
+fonttools==3.7.2
 pyparsing==2.2.0
