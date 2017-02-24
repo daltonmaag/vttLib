@@ -504,7 +504,7 @@ def update_composites(font, glyphs=None, vtt_version=6):
             try:
                 transform_assembly(data, vtt_components)
             except ParseException as e:
-                log_program_error(name, e)
+                log_program_error(glyph_name, e)
                 raise VTTLibError(e)
         if not glyph.isComposite():
             if vtt_components:
