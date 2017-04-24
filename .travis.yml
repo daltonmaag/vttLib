@@ -1,0 +1,20 @@
+sudo: false
+language: python
+python:
+  - "2.7"
+  - "3.6"
+install: pip install tox-travis
+script: tox
+before_deploy: tox -e bdist
+deploy:
+  provider: releases
+  api_key:
+    secure: VN9qxz1V75JMaXD1asKN2YUOAqLVrjy/QD5lHYDBXvGPh3A3wMznOh4xahwYeDGM+dtPaTq7u2L2XfwUQ2cFj1NjUWWRNFbfBzA3Fmu9FS0i8VXQ/1pn+fx45IHASmsaUig0Yu/EOhSKjd83UWlZ3GEo75VAibv/EMkMDXyVKgmtcKh4zzrxf7mFPsUJTrcoAjuFeGKNKLiGgVrVO6AB/WRCqXPsN3UQ+Mxi3tIvUu56eBojg4x7/GW62Sz7yfyETMTOmSTb8LD/Xmdu1SYd1J8iIqgyMu66RP1El8ZHRrqGIyv3fUuv0rjMLC1aPTNlxwdNF7gzIhV0OxJ6N4bJXr9PM3wb/8ciTstW8grgNi1LP/opW9WKDhEcP/FPOMmM4mE7jZhv/kRuSAzUoZJzKK/imgFyRhJ7PPOwfHLGSmSA6r6/tpAE3An5Hx6660ggfDtX8Yo2CQcVbGjT2PomndMS9ZxiYBHZs1ebou074z99c9fKSCYbSyHEiyXLLlCjnQFTyiMJymfAtxkEZu315um/5ZA387kPGuVhKmvu0whdbxoiIa7lIoPFLUPrgNn30gOSNlzs23TOvZeolxwy1aqLhoAK5CBm/sH7JUi/SorzPiOl9R5Gq5u/X3tI+fvxgIqS/NMOSvmZGOjmOvGrNzSsig1Nthwj7tYK5KDV4LY=
+  skip_cleanup: true
+  file_glob: true
+  file: "dist/*"
+  on:
+    repo: daltonmaag/vttLib
+    tags: true
+    all_branches: true
+    python: 3.6
