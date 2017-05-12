@@ -1,0 +1,75 @@
+PUSHB[ ]	/* 1 value pushed */
+83
+FDEF[ ]	/* FunctionDefinition */
+  PUSHB[ ]	/* 2 values pushed */
+  0 2
+  CINDEX[ ]	/* CopyXToTopStack */
+  PUSHB[ ]	/* 1 value pushed */
+  2
+  CINDEX[ ]	/* CopyXToTopStack */
+  PUSHB[ ]	/* 1 value pushed */
+  2
+  CINDEX[ ]	/* CopyXToTopStack */
+  GTEQ[ ]	/* GreaterThanOrEqual */
+  PUSHW[ ]	/* 1 value pushed */
+  53
+  SWAP[ ]	/* SwapTopStack */
+  JROT[ ]	/* JumpRelativeOnTrue */
+  PUSHB[ ]	/* 1 value pushed */
+  2
+  CINDEX[ ]	/* CopyXToTopStack */
+  PUSHB[ ]	/* 1 value pushed */
+  2
+  CINDEX[ ]	/* CopyXToTopStack */
+  ADD[ ]	/* Add */
+  PUSHB[ ]	/* 1 value pushed */
+  32
+  MUL[ ]	/* Multiply */
+  DUP[ ]	/* DuplicateTopStack */
+  DUP[ ]	/* DuplicateTopStack */
+  PUSHB[ ]	/* 1 value pushed */
+  6
+  CINDEX[ ]	/* CopyXToTopStack */
+  SWAP[ ]	/* SwapTopStack */
+  DIV[ ]	/* Divide */
+  LT[ ]	/* LessThan */
+  IF[ ]	/* If */
+    ROLL[ ]	/* RollTopThreeStack */
+    POP[ ]	/* PopTopStack */
+    PUSHB[ ]	/* 1 value pushed */
+    1
+    ADD[ ]	/* Add */
+    SWAP[ ]	/* SwapTopStack */
+  ELSE[ ]	/* Else */
+    DUP[ ]	/* DuplicateTopStack */
+    DUP[ ]	/* DuplicateTopStack */
+    PUSHB[ ]	/* 1 value pushed */
+    6
+    CINDEX[ ]	/* CopyXToTopStack */
+    SWAP[ ]	/* SwapTopStack */
+    DIV[ ]	/* Divide */
+    GT[ ]	/* GreaterThan */
+    IF[ ]	/* If */
+      SWAP[ ]	/* SwapTopStack */
+      POP[ ]	/* PopTopStack */
+      PUSHB[ ]	/* 1 value pushed */
+      1
+      SUB[ ]	/* Subtract */
+    ELSE[ ]	/* Else */
+      ROLL[ ]	/* RollTopThreeStack */
+      POP[ ]	/* PopTopStack */
+      SWAP[ ]	/* SwapTopStack */
+      POP[ ]	/* PopTopStack */
+      DUP[ ]	/* DuplicateTopStack */
+    EIF[ ]	/* EndIf */
+  EIF[ ]	/* EndIf */
+  PUSHW[ ]	/* 1 value pushed */
+  -63
+  JMPR[ ]	/* Jump */
+  ADD[ ]	/* Add */
+  PUSHB[ ]	/* 1 value pushed */
+  32
+  MUL[ ]	/* Multiply */
+  SWAP[ ]	/* SwapTopStack */
+  POP[ ]	/* PopTopStack */
+ENDF[ ]	/* EndFunctionDefinition */
