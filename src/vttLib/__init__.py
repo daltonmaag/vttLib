@@ -5,7 +5,7 @@ import os
 import errno
 import array
 import shutil
-from collections import deque, namedtuple, OrderedDict
+from collections import deque, namedtuple, OrderedDict, defaultdict
 import logging
 import plistlib
 import glob
@@ -15,7 +15,7 @@ from vttLib.parser import AssemblyParser, ParseException
 from fontTools.ttLib import (
     TTFont, newTable, TTLibError, tagToIdentifier, identifierToTag)
 from fontTools.ttLib.tables.ttProgram import Program
-from fontTools.misc.py23 import StringIO, tobytes, tounicode, tostr
+from fontTools.misc.py23 import StringIO, tobytes, tounicode, tostr, basestring
 from fontTools.ttLib.tables._g_l_y_f import (
     USE_MY_METRICS, ROUND_XY_TO_GRID, UNSCALED_COMPONENT_OFFSET,
     SCALED_COMPONENT_OFFSET,
@@ -107,20 +107,90 @@ AnchorComponent = namedtuple('AnchorComponent', [
     'index', 'first', 'second', 'use_my_metrics',
     'scaled_offset'])
 
+JUMP_INSTRUCTIONS = frozenset(["JMPR", "JROT", "JROF"])
 
-def transform_assembly(data, components=None):
-    data = data.strip()
-    if not data:
-        # input data just contains empty whitespace; skip it
-        return ""
-    tokens = AssemblyParser.parseString(data, parseAll=True)
 
+class JumpVariable(object):
+
+    def __init__(self, positions=None, to_label=None, from_offset=None):
+        if positions:
+            self.positions = defaultdict(list, **positions)
+        else:
+            self.positions = defaultdict(list)
+        self.to_label = to_label
+        self.from_offset = from_offset
+        self.relative_offset = None
+
+    def __repr__(self):
+        return "{}({})".format(
+            type(self).__name__,
+            ", ".join("{}={}".format(k, v) for k, v in sorted(self.__dict__.items())))
+
+
+def split_functions(fpgm_tokens):
+    funcs = []
+    tokens = iter(fpgm_tokens)
+    for t in tokens:
+        mnemonic = t.mnemonic
+        if mnemonic.startswith("FDEF"):
+            body = [t]
+            for t in tokens:
+                body.append(t)
+                if t.mnemonic.startswith("ENDF"):
+                    break
+            funcs.append(body)
+            continue
+        assert 0, "Unexpected token in fpgm: %s" % t
+    return funcs
+
+
+def merge_functions(functions, include=None):
+    asm = []
+    for line in "\n".join(functions).splitlines():
+        asm.extend(line.strip().split())
+    funcs = {}
+    stack = []
+    tokens = iter(asm)
+    for token in tokens:
+        if token.startswith("PUSH") or token.startswith("NPUSH"):
+            for token in tokens:
+                try:
+                    num = int(token)
+                    stack.append(num)
+                except ValueError:
+                    break
+        if token.startswith("FDEF"):
+            num = stack.pop()
+            body = [token]
+            for token in tokens:
+                body.append(token)
+                if token.startswith("ENDF"):
+                    break
+            funcs[num] = body
+            continue
+        assert 0, "Unexpected token in fpgm: %s" % token
+    if include is not None:
+        include = set(include)
+        funcs = {num: body for num, body in funcs.items() if num in include}
+    result = ["PUSH[]"] + [str(n) for n in sorted(funcs, reverse=True)]
+    for num in sorted(funcs):
+        result.extend(funcs[num])
+    return result
+
+
+def tokenize(data, parseAll=True):
+    return AssemblyParser.parseString(data, parseAll=parseAll)
+
+
+def transform(tokens, components=None):
     push_on = True
     push_indexes = [0]
     stream = [deque()]
     pos = 1
     if components is None:
         components = []
+    jump_labels = {}
+    jump_variables = defaultdict(JumpVariable)
     round_to_grid = False
     use_my_metrics = False
     scaled_offset = None
@@ -173,14 +243,45 @@ def transform_assembly(data, components=None):
             pi = push_indexes.pop()
             stack = stream[pi]
             if len(stack):
-                stream[pi] = "PUSH[] %s" % " ".join([str(i) for i in stack])
+                stream[pi] = ["PUSH[]"] + list(stack)
             continue
 
         elif mnemonic == "#PUSH":
-            # XXX push stack items whether or not in #PUSHON/OFF?
-            stream.append(
-                "PUSH[] %s" % " ".join([str(i) for i in t.stack_items]))
-            pos += 1
+            assert len(t.stack_items) > 0
+
+            last_type = type(None)
+            push_groups = []
+            for item in t.stack_items:
+                curr_type = type(item)
+                if curr_type != last_type:
+                    push_groups.append([item])
+                else:
+                    push_groups[-1].append(item)
+                last_type = curr_type
+
+            column = 1
+            for args in push_groups:
+                is_variable = isinstance(args[0], basestring)
+                if is_variable:
+                    # initialize jump variables with the row and column in which
+                    # they appear in the stream
+                    for column, item in enumerate(args, start=1):
+                        jump_variables[item].positions[pos].append(column)
+                    # we explicitly push words for variable stack items to
+                    # prevent optimization from breaking relative jump offsets
+                    # Here '-999' is just an arbitrary word value which will
+                    # be replaced with the actual relative offset
+                    args = [-999] * len(args)
+                    if len(args) > 8:
+                        stream.append(["NPUSHW[]", len(args)] + args)
+                    else:
+                        stream.append(["PUSHW[]"] + args)
+                else:
+                    # let fonttools do the automatic push optimization for
+                    # normal integer stack items
+                    stream.append(["PUSH[]"] + args)
+                pos += 1
+
             continue
 
         elif mnemonic.startswith(("DLTC", "DLTP", "DELTAP", "DELTAC")):
@@ -214,6 +315,17 @@ def transform_assembly(data, components=None):
                     stack.appendleft((rel_ppem << 4) | selector)
             if mnemonic.startswith("DLT"):
                 mnemonic = mnemonic.replace("DLT", "DELTA")
+        elif mnemonic.startswith("#") and mnemonic.endswith(":"):
+            # collect goto labels used with relative jump instructions
+            label = mnemonic[:-1]
+            jump_labels[label] = pos
+            continue
+        elif mnemonic in JUMP_INSTRUCTIONS:
+            # record the current offset of jump instruction and the label which
+            # it should jumps to
+            variable, label = t.assignment
+            jump_variables[variable].to_label = label
+            jump_variables[variable].from_offset = pos
         else:
             if push_on:
                 for i in reversed(t.stack_items):
@@ -221,26 +333,87 @@ def transform_assembly(data, components=None):
             else:
                 assert not t.stack_items
 
-        stream.append("%s[%s]" % (mnemonic, t.flags))
+        stream.append(["%s[%s]" % (mnemonic, t.flags)])
         pos += 1
+
+    # calculate the relative offsets of each jump variables
+    for name, variable in jump_variables.items():
+        to_offset = jump_labels[variable.to_label]
+        from_offset = variable.from_offset
+        assert to_offset != from_offset
+        start, end = sorted([from_offset, to_offset])
+        sign = 1 if to_offset > from_offset else -1
+        size = _calc_stream_size(stream[start:end])
+        variable.relative_offset = sign * size
+
+    # replace variable push args with the computed relative offsets
+    for name, variable in jump_variables.items():
+        for row, columns in variable.positions.items():
+            for column in columns:
+                stream[row][column] = variable.relative_offset
 
     assert len(push_indexes) == 1 and push_indexes[0] == 0, push_indexes
     stack = stream[0]
     if len(stack):
-        stream[0] = "PUSH[] %s" % " ".join([str(i) for i in stack])
+        stream[0] = ["PUSH[]"] + list(stack)
 
-    return "\n".join([i for i in stream if i])
+    return _concat_stream(stream)
 
 
-def pformat_tti(program, preserve=False):
+def transform_assembly(data, name=None, components=None):
+    data = data.strip()
+    if not data:
+        # input data just contains empty whitespace; skip it
+        return ""
+
+    tokens = tokenize(data)
+
+    if name == "fpgm":
+        # we transform each function in the fpgm individually, since different
+        # functions may refer to jump variables with the same name, however
+        # the relative jumps must occur within the same functions (I think...)
+        funcs = [transform(f) for f in split_functions(tokens)]
+        return merge_functions(funcs)
+    else:
+        return transform(tokens, components=components)
+
+
+def _concat_stream(stream):
+    return "\n".join(
+        " ".join(str(i) for i in item) for item in stream if item)
+
+
+def _calc_stream_size(stream):
+    program = make_ft_program(_concat_stream(stream))
+    return len(program.getBytecode())
+
+
+def make_ft_program(assembly):
+    program = Program()
+    program.fromAssembly(assembly)
+    # need to compile bytecode for PUSH optimization
+    program._assemble()
+    del program.assembly
+    return program
+
+
+_indentRE = re.compile("^FDEF|IF|ELSE\[ \]\t.+")
+_unindentRE = re.compile("^ELSE|ENDF|EIF\[ \]\t.+")
+
+
+def pformat_tti(program, preserve=True):
     from fontTools.ttLib.tables.ttProgram import _pushCountPat
 
     assembly = program.getAssembly(preserve=preserve)
     stream = StringIO()
     i = 0
+    indent = 0
     nInstr = len(assembly)
     while i < nInstr:
         instr = assembly[i]
+        if _unindentRE.match(instr):
+            indent -= 1
+        stream.write('  '*indent)
         stream.write(instr)
         stream.write("\n")
         m = _pushCountPat.match(instr)
@@ -255,9 +428,12 @@ def pformat_tti(program, preserve=False):
                     stream.write("\n")
                     line = []
                 line.append(assembly[i+j])
+            stream.write('  '*indent)
             stream.write(' '.join(line))
             stream.write("\n")
             i = i + j + 1
+        if _indentRE.match(instr):
+            indent += 1
     return stream.getvalue()
 
 
@@ -268,16 +444,12 @@ def log_program_error(name, error):
 
 def make_program(vtt_assembly, name=None, components=None):
     try:
-        ft_assembly = transform_assembly(vtt_assembly, components)
+        ft_assembly = transform_assembly(
+            vtt_assembly, name=name, components=components)
     except ParseException as e:
         log_program_error(name, e)
         raise VTTLibError(e)
-    program = Program()
-    program.fromAssembly(ft_assembly)
-    # need to compile bytecode for PUSH optimization
-    program._assemble()
-    del program.assembly
-    return program
+    return make_ft_program(ft_assembly)
 
 
 def make_glyph_program(vtt_assembly, name=None):
@@ -502,7 +674,7 @@ def update_composites(font, glyphs=None, vtt_version=6):
             # 'vtt_components' list is updated in place; we don't care about
             # the return value (i.e. transformed FontTools assembly) here
             try:
-                transform_assembly(data, vtt_components)
+                transform_assembly(data, components=vtt_components)
             except ParseException as e:
                 log_program_error(glyph_name, e)
                 raise VTTLibError(e)

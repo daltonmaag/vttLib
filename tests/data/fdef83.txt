@@ -1,0 +1,117 @@
+FDEF[], 83
+
+/* CALL[], &lt;radicand&gt;, 83
+
+   returns with square root of radicand on stack */
+
+#BEGIN
+#PUSHOFF
+
+/* STACK: &lt;radicand&gt; */
+
+#PUSH, 0, 2
+CINDEX[]
+
+/* STACK: &lt;radicand&gt;, &lt;low&gt;, &lt;high&gt; */
+
+#WBeginLoop83:
+
+    #PUSH, 2 /* low */
+    CINDEX[]
+    #PUSH, 2 /* high */
+    CINDEX[]
+    GTEQ[]
+    #PUSH, WOffset83a
+    SWAP[]
+    JROT[], (WOffset83a=#WEndLoop83) /* while low &lt;= high */
+
+    /* STACK: &lt;radicand&gt;, &lt;low&gt;, &lt;high&gt; */
+
+    #PUSH, 2 /* low */
+    CINDEX[]
+    #PUSH, 2 /* high */
+    CINDEX[]
+    ADD[]
+    #PUSH, 32
+    MUL[]
+
+    /* STACK: &lt;radicand&gt;, &lt;low&gt;, &lt;high&gt;, &lt;mid&gt; */
+
+    DUP[]
+    DUP[]
+    #PUSH, 6 /* radicand */
+    CINDEX[]
+    SWAP[]
+    DIV[]
+
+    /* STACK: &lt;radicand&gt;, &lt;low&gt;, &lt;high&gt;, &lt;mid&gt;, &lt;mid&gt;, &lt;radicand/mid&gt; */
+
+    LT[]
+    IF[]
+
+        /* STACK: &lt;radicand&gt;, &lt;low&gt;, &lt;high&gt;, &lt;mid&gt; */
+
+        ROLL[]
+        POP[]
+        #PUSH, 1
+        ADD[]
+        SWAP[]
+
+        /* STACK: &lt;radicand&gt;, &lt;mid+1&gt;, &lt;high&gt; */
+
+    ELSE[]
+
+        DUP[]
+        DUP[]
+        #PUSH, 6 /* radicand */
+        CINDEX[]
+        SWAP[]
+        DIV[]
+
+        GT[]
+        IF[]
+
+            /* STACK: &lt;radicand&gt;, &lt;low&gt;, &lt;high&gt;, &lt;mid&gt; */
+
+            SWAP[]
+            POP[]
+            #PUSH, 1
+            SUB[]
+
+            /* STACK: &lt;radicand&gt;, &lt;low&gt;, &lt;mid-1&gt; */
+
+        ELSE[]
+
+            /* STACK: &lt;radicand&gt;, &lt;low&gt;, &lt;high&gt;, &lt;mid&gt; */
+
+            ROLL[]
+            POP[]
+            SWAP[]
+            POP[]
+            DUP[]
+
+            /* STACK: &lt;radicand&gt;, &lt;mid&gt;, &lt;mid&gt; */
+
+        EIF[]
+
+    EIF[]
+
+
+    #PUSH, WOffset83b
+    JMPR[], (WOffset83b=#WBeginLoop83)
+
+#WEndLoop83:
+
+/* STACK: &lt;radicand&gt;, &lt;low&gt;, &lt;high&gt; */
+
+ADD[]
+#PUSH, 32
+MUL[]
+SWAP[]
+POP[]
+
+/* STACK: &lt;mid&gt; */
+
+#PUSHON
+#END
+ENDF[]

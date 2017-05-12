@@ -1,0 +1,32 @@
+PUSHB[ ]    /* 1 value pushed */
+133
+FDEF[ ] /* FunctionDefinition */
+  SWAP[ ]   /* SwapTopStack */
+  PUSHB[ ]  /* 1 value pushed */
+  2
+  CINDEX[ ] /* CopyXToTopStack */
+  PUSHB[ ]  /* 1 value pushed */
+  2
+  CINDEX[ ] /* CopyXToTopStack */
+  GTEQ[ ]   /* GreaterThanOrEqual */
+  IF[ ] /* If */
+    DUP[ ]  /* DuplicateTopStack */
+    PUSHB[ ]    /* 1 value pushed */
+    4
+    CINDEX[ ]   /* CopyXToTopStack */
+    IF[ ]   /* If */
+      ALIGNRP[ ]    /* AlignRelativePt */
+    ELSE[ ] /* Else */
+      IP[ ] /* InterpolatePts */
+    EIF[ ]  /* EndIf */
+    PUSHB[ ]    /* 1 value pushed */
+    1
+    ADD[ ]  /* Add */
+    PUSHW[ ]    /* 1 value pushed */
+    -23
+    JMPR[ ] /* Jump */
+  EIF[ ]    /* EndIf */
+  POP[ ]    /* PopTopStack */
+  POP[ ]    /* PopTopStack */
+  POP[ ]    /* PopTopStack */
+ENDF[ ] /* EndFunctionDefinition */

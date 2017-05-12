@@ -1,0 +1,173 @@
+FDEF[], 153
+/* Function 153 takes 1 argument, a "bitfield" flag. */
+/* VERSION 1.0 20111117 */
+/*
+Function 153 is intended to take a set of one or more bits as input and do an AND (e.g. mask) of those
+bits with the set of flags returned by Function 84. Then determine if ALL
+of these resultant bits from the mask are set.
+
+Function 153 returns TRUE if the match is successful, and FALSE if it is not successful.
+
+If the parameter is zero, indicating no flags, then the function returns FALSE.
+
+This function takes a maxiumum of 32 flags.
+
+USES: Storage 2 (FN 84)
+RETURNS: 0 or 1
+*/
+
+#BEGIN
+#PUSHOFF
+/* Input parameter is a set of one or more flags */
+
+DUP[]
+#PUSH, 2     /* Read FN 84 flags */
+RS[]
+EQ[]         /* If a simple match, return TRUE */
+#PUSH, 1
+SWAP[]
+
+#PUSH, BEcln
+SWAP[]
+JROT[], (BEcln=#LEndClear)  /* Jump to end and clean up stack. */
+POP[]
+#PUSH, 0, 2
+RS[]         /* Read FN 84 flags */
+#PUSH, BEclr /* If no FN 84 flags, return FALSE */
+SWAP[]
+
+JROF[], (BEclr=#LEndClear)
+
+POP[]
+#PUSH, 0, 2   /* 0 is the boolean tracking success, start off with FALSE */
+RS[]
+ROLL[]
+#PUSH, 32   /* Maximum number of bits to loop through */
+/* TopLoop: */
+#LTopLoop:
+   /* STACK
+   Loop Iteration Count
+   Updated (shifted) Input Value
+   Updated (shifted) FN 84 Flag
+   Conditional boolean tracking success
+   */
+  DUP[]
+  NOT[]
+  IF[]    /* Exit the loop when done */
+    POP[]
+    POP[]
+    POP[]
+    #PUSH, BDEnd /* 73  End */
+
+    JMPR[], (BDEnd=#LEndFn)
+
+  EIF[]
+  ROLL[]
+  ROLL[]
+  DUP[]
+  ROLL[]
+  DUP[]
+  ROLL[]
+  SWAP[]
+  /* STACK
+  Updated (shifted) FN 84 Flag
+  Updated (shifted) Input Value
+  Updated (shifted) FN 84 Flag
+  Updated (Shifted) Input Value
+  Loop Interation Count
+  Conditional boolean tracking success
+  */
+
+  /* Check to see if the lower-order bit is set in the FN 84 Flag */
+  #PUSH, 4096 /* Convert to 26.6 by multiply by 64 x 64 */
+  MUL[]
+  ODD[]
+  IF[]
+    /* Check to see if the lower-order bit is set in the Input Value */
+    #PUSH, 4096
+    MUL[]
+    ODD[]
+    IF[]
+      #PUSH, 4
+      MINDEX[]
+      #PUSH, 1  /* Set TRUE return code */
+      OR[]      /* We OR this because we will immediately exit if we fail this test */
+      #PUSH, 4
+      MINDEX[]
+      #PUSH, 4
+      MINDEX[]
+      #PUSH, 4
+      MINDEX[]
+    ELSE[]
+      POP[]
+      POP[]
+      POP[]
+      POP[]
+      #PUSH, BTEnd , 0  /* 0 is the FALSE return code */
+      SWAP[]
+      JMPR[], (BTEnd=#LEndFn)
+
+    EIF[]
+  ELSE[]
+    POP[]
+  EIF[]
+  #PUSH, 4 /* Can this be cleaned up and integrated with the code below? */
+  MINDEX[]
+  SWAP[]
+  /* STACK
+  Updated (shifted) FN 84 Flag
+  Conditional boolean tracking success
+  Updated (shifted) Input Value
+  Loop Interation Count
+  */
+  /* Shift both the Input Value and the FN 84 Flag each one bit right */
+  #PUSH, 128  /* 2 in 26.6 */
+  DIV[]
+  DUP[]
+  NOT[]
+  IF[]
+    ROLL[]
+    NOT[]
+    ROLL[]
+    AND[]
+    SWAP[]
+    POP[]
+    SWAP[]
+    POP[]
+    #PUSH, BPEnd /* 29  End */
+
+    JMPR[], (BPEnd=#LEndFn)
+
+  EIF[]
+  ROLL[]
+  #PUSH, 128  /* 2 in 26.6 */
+  DIV[]
+  DUP[]
+  NOT[]
+  IF[]
+    POP[]
+    POP[]
+    SWAP[]
+    POP[]
+    #PUSH, BZEnd /* End */
+
+    JMPR[], (BZEnd=#LEndFn)
+
+  EIF[]
+  #PUSH, 4
+  MINDEX[]
+  #PUSH, 1
+  SUB[]
+  #PUSH, WReLoop  /* -77 TopLoop */
+
+JMPR[], (WReLoop=#LTopLoop)
+
+/* EndClear: */
+#LEndClear:
+SWAP[]
+POP[]
+#LEndFn:
+/* End: */
+#END
+#PUSHON
+ENDF[]

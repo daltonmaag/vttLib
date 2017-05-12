@@ -3,8 +3,8 @@ from __future__ import (
 import string
 
 from pyparsing import (
-    Word, nums, Suppress, pyparsing_common, oneOf, tokenMap, Combine,
-    OneOrMore, Optional, Literal, nestedExpr, Group, cStyleComment,
+    Word, alphas, nums, alphanums, Suppress, pyparsing_common, oneOf, tokenMap,
+    Combine, OneOrMore, Optional, Literal, nestedExpr, Group, cStyleComment,
     Regex, ParseException
 )
 
@@ -56,7 +56,9 @@ mnemonic = Word(
 signed_integer = Regex(r'[+-]?\d+').setName("signed integer").setParseAction(
     tokenMap(int))
 
-stack_item = Suppress(",") + (signed_integer | Suppress("*"))
+variable = Word(alphas, bodyChars=alphanums)
+
+stack_item = Suppress(",") + (signed_integer | Suppress("*") | variable)
 
 flag = oneOf(list(VTT_MNEMONIC_FLAGS.keys()))
 # convert flag to binary string
@@ -84,6 +86,17 @@ instruction = Group(
     Optional(stack_items)
 )
 
+label = Word("#", alphanums)
+jump_label = Group(Combine(label + Literal(":")).setResultsName('mnemonic'))
+assignment = Group(
+    variable.setResultsName('variable') + Literal("=").suppress() +
+    label.setResultsName("label")).setResultsName("assignment")
+jump_mnemonic = oneOf(["JMPR", "JROT", "JROF"]).setResultsName("mnemonic")
+jump = Group(
+    jump_mnemonic + Suppress("[") + Suppress("]") + Suppress(",") +
+    Suppress("(") + assignment + Suppress(")")
+)
+
 pragma_memonic = Word("#", bodyChars=alpha_upper).setResultsName("mnemonic")
 
 pragma = Group(pragma_memonic + Optional(stack_items))
@@ -91,4 +104,17 @@ pragma = Group(pragma_memonic + Optional(stack_items))
 comment = cStyleComment.suppress()
 
 # this is the only public class
-AssemblyParser = OneOrMore(comment | pragma | instruction)
+AssemblyParser = OneOrMore(comment | jump_label | pragma | jump | instruction)
+
+
+if __name__ == "__main__":
+    import sys
+
+    infile = sys.argv[1]
+    with open(infile, 'r') as fp:
+        data = fp.read()
+
+    tokens = AssemblyParser.parseString(data, parseAll=True)
+
+    for i, t in enumerate(tokens):
+        print(i, repr(t))

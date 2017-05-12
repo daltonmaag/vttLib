@@ -1,0 +1,50 @@
+FDEF[], 133
+
+/* support fn for fns 134 and 135
+
+   CALL[], &lt;align?&gt;, &lt;from&gt;, &lt;to&gt;, 133 */
+
+#BEGIN
+#PUSHOFF
+
+SWAP[]
+
+/* STACK: &lt;align?&gt;, &lt;to&gt;, &lt;from&gt; */
+
+#WBeginLoop133:
+
+#PUSH, 2 /* to */
+CINDEX[]
+#PUSH, 2 /* from */
+CINDEX[]
+GTEQ[]
+IF[]
+
+    /* STACK: &lt;align?&gt;, &lt;to&gt;, &lt;from&gt; */
+
+    DUP[]
+    #PUSH, 4 /* align? */
+    CINDEX[]
+    IF[]
+        ALIGNRP[]
+    ELSE[]
+        IP[]
+    EIF[]
+
+    #PUSH, 1
+    ADD[]
+
+    #PUSH, WOffset133
+    JMPR[], (WOffset133=#WBeginLoop133)
+
+EIF[]
+
+/* STACK: &lt;align?&gt;, &lt;to&gt;, &lt;from&gt; */
+
+POP[]
+POP[]
+POP[]
+
+#PUSHON
+#END
+ENDF[]
