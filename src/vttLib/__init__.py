@@ -57,6 +57,7 @@ log = logging.getLogger(__name__)
 
 VTT_TABLES = ["TSI0", "TSI1", "TSI2", "TSI3", "TSI5"]
 TTX_DATA_FOLDER = "com.github.fonttools.ttx"
+VTTLIB_DATA = "com.github.daltonmaag.vttLib.plist"
 MAXP_KEY = 'com.robofont.robohint.maxp'
 MAXP_ATTRS = {
     'maxZones',
@@ -735,7 +736,7 @@ def compile_instructions(font, ship=True):
                 del font[tag]
 
 
-def read_maxp_data(ufo, ttfont):
+def read_maxp_data_from_lib(ufo, ttfont):
     lib = read_plist(os.path.join(ufo, "lib.plist"), default={})
     maxp = ttfont['maxp']
     found = False
@@ -746,19 +747,47 @@ def read_maxp_data(ufo, ttfont):
             setattr(maxp, name, value)
             log.debug("maxp.%s = %s" % (name, value))
             found = True
-    if not found:
-        log.debug("No 'maxp' values found in lib.plist")
+    return found
+
+
+def read_maxp_data(ufo, ttfont):
+    if read_maxp_data_from_lib(ufo, ttfont):
+        log.warning('storing maxp in lib.plist is deprecated; '
+                    'use data folder instead')
+        return
+
+    data = read_plist(os.path.join(ufo, "data", VTTLIB_DATA), default={})
+    if not data or 'maxp' not in data:
+        log.debug("No 'maxp' data found")
+        return
+
+    values = data['maxp']
+    maxp = ttfont['maxp']
+    for name in MAXP_ATTRS:
+        value = values[name]
+        setattr(maxp, name, value)
+        log.debug("maxp.%s = %s" % (name, value))
 
 
 def write_maxp_data(font, ufo):
     libfilename = os.path.join(ufo, "lib.plist")
     lib = read_plist(libfilename, default={})
+    updated = False
+    for key in MAXP_SUB_KEYS:
+        if key in lib:
+            del lib[key]
+            log.warning("removed deprecated '%s' in lib.plist" % key)
+            updated = True
+    if updated:
+        write_plist(lib, libfilename)
+        if ufonormalizer:
+            ufonormalizer.normalizeLibPlist(ufo)
+
     maxp = font['maxp']
+    data = {'maxp': {}}
     for name in MAXP_ATTRS:
-        lib[MAXP_KEY + "." + name] = getattr(maxp, name)
-    write_plist(lib, libfilename)
-    if ufonormalizer:
-        ufonormalizer.normalizeLibPlist(ufo)
+        data['maxp'][name] = getattr(maxp, name)
+    write_plist(data, os.path.join(ufo, "data", VTTLIB_DATA))
 
 
 comment_re = r'/\*%s\*/[\r\n]*'
@@ -823,6 +852,18 @@ def subset_vtt_glyph_programs(font, glyph_names):
             del groups[name]
 
 
+def check_ufo_version(ufo, minimum=3):
+    try:
+        metainfo = read_plist(os.path.join(ufo, "metainfo.plist"))
+        ufo_version = int(metainfo["formatVersion"])
+    except (IOError, KeyError, ValueError) as e:
+        raise VTTLibArgumentError("Not a valid UFO file: %s" % e)
+    else:
+        if ufo_version < minimum:
+            raise VTTLibArgumentError(
+                "Unsupported UFO format: %d" % ufo_version)
+
+
 def vtt_dump(infile, outfile=None, **kwargs):
     if not os.path.exists(infile):
         raise VTTLibArgumentError("'%s' not found" % infile)
@@ -843,15 +884,7 @@ def vtt_dump(infile, outfile=None, **kwargs):
     if not os.path.exists(ufo) or not os.path.isdir(ufo):
         raise VTTLibArgumentError("No such directory: '%s'" % ufo)
 
-    try:
-        metainfo = read_plist(os.path.join(ufo, "metainfo.plist"))
-        ufo_version = int(metainfo["formatVersion"])
-    except (IOError, KeyError, ValueError) as e:
-        raise VTTLibArgumentError("Not a valid UFO file: %s" % e)
-    else:
-        if ufo_version < 3:
-            raise VTTLibArgumentError(
-                "Unsupported UFO format: %d" % ufo_version)
+    check_ufo_version(ufo)
 
     folder = os.path.join(ufo, "data", TTX_DATA_FOLDER)
     # create data sub-folder if it doesn't exist already
@@ -880,15 +913,8 @@ def vtt_merge(infile, outfile=None, **kwargs):
     ufo = infile
     if not os.path.exists(ufo) or not os.path.isdir(ufo):
         raise VTTLibArgumentError("No such directory: '%s'" % ufo)
-    try:
-        metainfo = read_plist(os.path.join(ufo, "metainfo.plist"))
-        ufo_version = int(metainfo["formatVersion"])
-    except (IOError, KeyError, ValueError) as e:
-        raise VTTLibArgumentError("Not a valid UFO file: %s" % e)
-    else:
-        if ufo_version < 3:
-            raise VTTLibArgumentError(
-                "Unsupported UFO format: %d" % ufo_version)
+
+    check_ufo_version(ufo)
 
     if not outfile:
         outfile = os.path.splitext(infile)[0] + ".ttf"
