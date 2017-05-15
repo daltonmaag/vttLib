@@ -57,7 +57,7 @@ log = logging.getLogger(__name__)
 
 VTT_TABLES = ["TSI0", "TSI1", "TSI2", "TSI3", "TSI5"]
 TTX_DATA_FOLDER = "com.github.fonttools.ttx"
-VTTLIB_DATA = "com.github.daltonmaag.vttLib.plist"
+VTTLIB_DATA = "com.daltonmaag.vttLib.plist"
 MAXP_KEY = 'com.robofont.robohint.maxp'
 MAXP_ATTRS = {
     'maxZones',
