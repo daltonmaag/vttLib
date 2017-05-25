@@ -141,6 +141,9 @@ def split_functions(fpgm_tokens):
                     break
             funcs.append(body)
             continue
+        # some version of VTT has #PUSHON between function definitions
+        if t.mnemonic.startswith("#PUSHON"):
+            continue
         assert 0, "Unexpected token in fpgm: %s" % t
     return funcs
 
