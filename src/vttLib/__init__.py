@@ -89,7 +89,7 @@ def set_cvt_table(font, data):
     values = array.array(tostr("h"))
     # control values are defined in VTT Control Program as colon-separated
     # INDEX: VALUE pairs
-    for m in re.finditer(r"^\s*([0-9]+):\s*(-?[0-9]+)", data, re.MULTILINE):
+    for m in re.finditer(r"^\s*([0-9]+)\s*:\s*(-?[0-9]+)", data, re.MULTILINE):
         index, value = int(m.group(1)), int(m.group(2))
         for i in range(1 + index - len(values)):
             # missing CV indexes default to zero
