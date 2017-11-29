@@ -15,7 +15,7 @@ from vttLib.parser import AssemblyParser, ParseException
 from fontTools.ttLib import (
     TTFont, newTable, TTLibError, tagToIdentifier, identifierToTag)
 from fontTools.ttLib.tables.ttProgram import Program
-from fontTools.misc.py23 import StringIO, tobytes, tounicode, tostr, basestring
+from fontTools.misc.py23 import StringIO, tobytes, tostr, basestring
 from fontTools.ttLib.tables._g_l_y_f import (
     USE_MY_METRICS, ROUND_XY_TO_GRID, UNSCALED_COMPONENT_OFFSET,
     SCALED_COMPONENT_OFFSET,
@@ -491,7 +491,7 @@ def get_vtt_program(font, name, is_talk=False, is_glyph=False):
         raise KeyError(
             "%s program missing from %s: '%s'" % (
                 "Glyph" if is_glyph else "Extra", tag, name))
-    return tounicode(data.replace(b"\r", b"\n"), encoding='utf-8')
+    return data.replace("\r", "\n")
 
 
 def set_extra_assembly(font, name, data):
@@ -514,8 +514,7 @@ def set_vtt_program(font, name, data, is_talk=False, is_glyph=False):
     tag = "TSI3" if is_talk else "TSI1"
     if tag not in font:
         raise VTTLibError("%s table not found" % tag)
-    data = tobytes(data, encoding='utf-8')
-    data = b'\r'.join(data.splitlines()).rstrip() + b'\r'
+    data = '\r'.join(data.splitlines()).rstrip() + '\r'
     if is_glyph:
         font[tag].glyphPrograms[name] = data
     else:
