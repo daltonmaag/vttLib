@@ -21,7 +21,7 @@ setup_params = dict(
     packages=setuptools.find_packages("src"),
     include_package_data=True,
     install_requires=[
-        'fonttools>=3.0',
+        'fonttools>=3.16.0',
         'pyparsing>=2.1.5',
     ],
     setup_requires=[
