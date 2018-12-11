@@ -35,7 +35,7 @@ def input_and_expected(request, test_name):
     return input_vtt_assembly, expected_ft_assembly
 
 
-class TransformAssemblyTest(object):
+class TestTransformAssembly(object):
 
     def test_empty(self):
         assert not transform_assembly("")
