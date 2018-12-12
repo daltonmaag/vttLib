@@ -39,8 +39,8 @@ if hasattr(plistlib, "load"):
     _plist_dump = plistlib.dump
 else:
     # PY2
-    _plist_load = plistlib.readPlist
-    _plist_dump = plistlib.writePlist
+    _plist_load = plistlib.readPlist  # type: ignore
+    _plist_dump = plistlib.writePlist  # type: ignore
 
 
 def read_plist(path, default=None):
@@ -262,11 +262,11 @@ def transform(tokens, components=None):
         elif mnemonic == "#PUSH":
             assert len(t.stack_items) > 0
 
-            last_type = type(None)
+            last_type = None
             push_groups = []
             for item in t.stack_items:
                 curr_type = type(item)
-                if curr_type != last_type:
+                if curr_type is not last_type:
                     push_groups.append([item])
                 else:
                     push_groups[-1].append(item)
