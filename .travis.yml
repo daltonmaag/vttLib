@@ -7,11 +7,11 @@ matrix:
        - TOX_ENV=py27
     - python: 3.6
       env:
-        - TOX_ENV=py35
+        - TOX_ENV=py36
     - python: 3.6
       env:
         - TOX_ENV=fix-lint
-install: pip install tox-travis
+install: pip install tox
 script: tox
 deploy:
   provider: releases
