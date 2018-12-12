@@ -1,25 +1,31 @@
-from __future__ import (
-    print_function, division, absolute_import, unicode_literals)
-import re
-import os
-import errno
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import array
-import shutil
-from collections import deque, namedtuple, OrderedDict, defaultdict
-import logging
-import plistlib
+import errno
 import glob
+import logging
+import os
+import plistlib
+import re
+import shutil
+from collections import OrderedDict, defaultdict, deque, namedtuple
 
-from vttLib.parser import AssemblyParser, ParseException
-
+from fontTools.misc.py23 import StringIO, basestring, tobytes, tostr
 from fontTools.ttLib import (
-    TTFont, newTable, TTLibError, tagToIdentifier, identifierToTag)
-from fontTools.ttLib.tables.ttProgram import Program
-from fontTools.misc.py23 import StringIO, tobytes, tostr, basestring
-from fontTools.ttLib.tables._g_l_y_f import (
-    USE_MY_METRICS, ROUND_XY_TO_GRID, UNSCALED_COMPONENT_OFFSET,
-    SCALED_COMPONENT_OFFSET,
+    TTFont,
+    TTLibError,
+    identifierToTag,
+    newTable,
+    tagToIdentifier,
 )
+from fontTools.ttLib.tables._g_l_y_f import (
+    ROUND_XY_TO_GRID,
+    SCALED_COMPONENT_OFFSET,
+    UNSCALED_COMPONENT_OFFSET,
+    USE_MY_METRICS,
+)
+from fontTools.ttLib.tables.ttProgram import Program
+from vttLib.parser import AssemblyParser, ParseException
 
 try:
     import ufonormalizer
@@ -39,7 +45,7 @@ else:
 
 def read_plist(path, default=None):
     try:
-        with open(path, 'rb') as fp:
+        with open(path, "rb") as fp:
             return _plist_load(fp)
     except IOError as e:
         if e.errno != errno.ENOENT or default is None:
@@ -48,7 +54,7 @@ def read_plist(path, default=None):
 
 
 def write_plist(value, path):
-    with open(path, 'wb') as fp:
+    with open(path, "wb") as fp:
         _plist_dump(value, fp)
 
 
@@ -58,18 +64,18 @@ log = logging.getLogger(__name__)
 VTT_TABLES = ["TSI0", "TSI1", "TSI2", "TSI3", "TSI5"]
 TTX_DATA_FOLDER = "com.github.fonttools.ttx"
 VTTLIB_DATA = "com.daltonmaag.vttLib.plist"
-MAXP_KEY = 'com.robofont.robohint.maxp'
+MAXP_KEY = "com.robofont.robohint.maxp"
 MAXP_ATTRS = {
-    'maxZones',
-    'maxTwilightPoints',
-    'maxStorage',
-    'maxFunctionDefs',
-    'maxInstructionDefs',
-    'maxStackElements',
-    'maxSizeOfInstructions',
+    "maxZones",
+    "maxTwilightPoints",
+    "maxStorage",
+    "maxFunctionDefs",
+    "maxInstructionDefs",
+    "maxStackElements",
+    "maxSizeOfInstructions",
 }
 MAXP_KEY_LEN = len(MAXP_KEY) + 1  # includes the '.'
-MAXP_SUB_KEYS = set(MAXP_KEY + '.' + k for k in MAXP_ATTRS)
+MAXP_SUB_KEYS = {MAXP_KEY + "." + k for k in MAXP_ATTRS}
 
 
 class VTTLibError(TTLibError):
@@ -101,18 +107,18 @@ def set_cvt_table(font, data):
         font["cvt "].values = values
 
 
-OffsetComponent = namedtuple('OffsetComponent', [
-    'index', 'x', 'y', 'round_to_grid', 'use_my_metrics',
-    'scaled_offset'])
-AnchorComponent = namedtuple('AnchorComponent', [
-    'index', 'first', 'second', 'use_my_metrics',
-    'scaled_offset'])
+OffsetComponent = namedtuple(
+    "OffsetComponent",
+    ["index", "x", "y", "round_to_grid", "use_my_metrics", "scaled_offset"],
+)
+AnchorComponent = namedtuple(
+    "AnchorComponent", ["index", "first", "second", "use_my_metrics", "scaled_offset"]
+)
 
 JUMP_INSTRUCTIONS = frozenset(["JMPR", "JROT", "JROF"])
 
 
 class JumpVariable(object):
-
     def __init__(self, positions=None, to_label=None, from_offset=None):
         if positions:
             self.positions = defaultdict(list, **positions)
@@ -125,7 +131,8 @@ class JumpVariable(object):
     def __repr__(self):
         return "{}({})".format(
             type(self).__name__,
-            ", ".join("{}={}".format(k, v) for k, v in sorted(self.__dict__.items())))
+            ", ".join("{}={}".format(k, v) for k, v in sorted(self.__dict__.items())),
+        )
 
 
 def split_functions(fpgm_tokens):
@@ -214,10 +221,11 @@ def transform(tokens, components=None):
             scaled_offset = False
             continue
         elif mnemonic == "OFFSET":
-            round_to_grid = t.flags == '1'
+            round_to_grid = t.flags == "1"
             index, x, y = t.stack_items
             component = OffsetComponent(
-                index, x, y, round_to_grid, use_my_metrics, scaled_offset)
+                index, x, y, round_to_grid, use_my_metrics, scaled_offset
+            )
             components.append(component)
             use_my_metrics = round_to_grid = False
             scaled_offset = None
@@ -225,7 +233,8 @@ def transform(tokens, components=None):
         elif mnemonic == "ANCHOR":
             index, first, second = t.stack_items
             component = AnchorComponent(
-                index, first, second, use_my_metrics, scaled_offset)
+                index, first, second, use_my_metrics, scaled_offset
+            )
             components.append(component)
             use_my_metrics = False
             scaled_offset = None
@@ -337,7 +346,7 @@ def transform(tokens, components=None):
             else:
                 assert not t.stack_items
 
-        stream.append(["%s[%s]" % (mnemonic, t.flags)])
+        stream.append(["{}[{}]".format(mnemonic, t.flags)])
         pos += 1
 
     # calculate the relative offsets of each jump variables
@@ -383,8 +392,7 @@ def transform_assembly(data, name=None, components=None):
 
 
 def _concat_stream(stream):
-    return "\n".join(
-        " ".join(str(i) for i in item) for item in stream if item)
+    return "\n".join(" ".join(str(i) for i in item) for item in stream if item)
 
 
 def _calc_stream_size(stream):
@@ -401,8 +409,8 @@ def make_ft_program(assembly):
     return program
 
 
-_indentRE = re.compile("^FDEF|IF|ELSE\[ \]\t.+")
-_unindentRE = re.compile("^ELSE|ENDF|EIF\[ \]\t.+")
+_indentRE = re.compile("^FDEF|IF|ELSE\\[ \\]\t.+")
+_unindentRE = re.compile("^ELSE|ENDF|EIF\\[ \\]\t.+")
 
 
 def pformat_tti(program, preserve=True):
@@ -417,7 +425,7 @@ def pformat_tti(program, preserve=True):
         instr = assembly[i]
         if _unindentRE.match(instr):
             indent -= 1
-        stream.write('  '*indent)
+        stream.write("  " * indent)
         stream.write(instr)
         stream.write("\n")
         m = _pushCountPat.match(instr)
@@ -428,12 +436,12 @@ def pformat_tti(program, preserve=True):
             j = 0
             for j in range(nValues):
                 if j and not (j % 25):
-                    stream.write(' '.join(line))
+                    stream.write(" ".join(line))
                     stream.write("\n")
                     line = []
-                line.append(assembly[i+j])
-            stream.write('  '*indent)
-            stream.write(' '.join(line))
+                line.append(assembly[i + j])
+            stream.write("  " * indent)
+            stream.write(" ".join(line))
             stream.write("\n")
             i = i + j + 1
         if _indentRE.match(instr):
@@ -442,14 +450,15 @@ def pformat_tti(program, preserve=True):
 
 
 def log_program_error(name, error):
-    log.error('An error occurred while parsing %sprogram:\n%s\n\n'
-        % ('"%s" ' % name if name else "", error.markInputline()))
+    log.error(
+        "An error occurred while parsing %sprogram:\n%s\n\n"
+        % ('"%s" ' % name if name else "", error.markInputline())
+    )
 
 
 def make_program(vtt_assembly, name=None, components=None):
     try:
-        ft_assembly = transform_assembly(
-            vtt_assembly, name=name, components=components)
+        ft_assembly = transform_assembly(vtt_assembly, name=name, components=components)
     except ParseException as e:
         log_program_error(name, e)
         raise VTTLibError(e)
@@ -489,8 +498,9 @@ def get_vtt_program(font, name, is_talk=False, is_glyph=False):
             data = font[tag].extraPrograms[name]
     except KeyError:
         raise KeyError(
-            "%s program missing from %s: '%s'" % (
-                "Glyph" if is_glyph else "Extra", tag, name))
+            "%s program missing from %s: '%s'"
+            % ("Glyph" if is_glyph else "Extra", tag, name)
+        )
     return data.replace("\r", "\n")
 
 
@@ -514,21 +524,21 @@ def set_vtt_program(font, name, data, is_talk=False, is_glyph=False):
     tag = "TSI3" if is_talk else "TSI1"
     if tag not in font:
         raise VTTLibError("%s table not found" % tag)
-    data = '\r'.join(data.splitlines()).rstrip() + '\r'
+    data = "\r".join(data.splitlines()).rstrip() + "\r"
     if is_glyph:
         font[tag].glyphPrograms[name] = data
     else:
         font[tag].extraPrograms[name] = data
 
 
-def check_composite_info(
-        name, glyph, vtt_components, glyph_order, check_flags=False):
+def check_composite_info(name, glyph, vtt_components, glyph_order, check_flags=False):
     n_glyf_comps = len(glyph.components)
     n_vtt_comps = len(vtt_components)
     if n_vtt_comps != n_glyf_comps:
         raise VTTLibInvalidComposite(
             "'%s' has incorrect number of components: expected %d, "
-            "found %d." % (name, n_glyf_comps, n_vtt_comps))
+            "found %d." % (name, n_glyf_comps, n_vtt_comps)
+        )
     for i, comp in enumerate(glyph.components):
         vttcomp = vtt_components[i]
         base_name = comp.glyphName
@@ -536,63 +546,71 @@ def check_composite_info(
         if vttcomp.index != index:
             raise VTTLibInvalidComposite(
                 "Component %d in '%s' has incorrect index: "
-                "expected %d, found %d." % (i, name, index, vttcomp.index))
-        if hasattr(comp, 'firstPt'):
-            if not hasattr(vttcomp, 'first') and hasattr(vttcomp, 'x'):
+                "expected %d, found %d." % (i, name, index, vttcomp.index)
+            )
+        if hasattr(comp, "firstPt"):
+            if not hasattr(vttcomp, "first") and hasattr(vttcomp, "x"):
                 raise VTTLibInvalidComposite(
                     "Component %d in '%s' has incorrect type: "
-                    "expected ANCHOR[], found OFFSET[]." % (i, name))
+                    "expected ANCHOR[], found OFFSET[]." % (i, name)
+                )
             if comp.firstPt != vttcomp.first:
                 raise VTTLibInvalidComposite(
                     "Component %d in '%s' has wrong anchor point: expected"
-                    " %d, found %d." % (i, name, comp.firstPt, vttcomp.first))
+                    " %d, found %d." % (i, name, comp.firstPt, vttcomp.first)
+                )
             if comp.secondPt != vttcomp.second:
                 raise VTTLibInvalidComposite(
                     "Component %d in '%s' has wrong anchor point: expected"
-                    " %d, found %d." % (i, name, comp.secondPt, vttcomp.second))
+                    " %d, found %d." % (i, name, comp.secondPt, vttcomp.second)
+                )
         else:
-            assert hasattr(comp, 'x')
-            if not hasattr(vttcomp, 'x') and hasattr(vttcomp, 'first'):
+            assert hasattr(comp, "x")
+            if not hasattr(vttcomp, "x") and hasattr(vttcomp, "first"):
                 raise VTTLibInvalidComposite(
                     "Component %d in '%s' has incorrect type: "
-                    "expected OFFSET[], found ANCHOR[]." % (i, name))
+                    "expected OFFSET[], found ANCHOR[]." % (i, name)
+                )
             if comp.x != vttcomp.x:
                 raise VTTLibInvalidComposite(
                     "Component %d in '%s' has wrong x offset: expected"
-                    " %d, found %d." % (i, name, comp.x, vttcomp.x))
+                    " %d, found %d." % (i, name, comp.x, vttcomp.x)
+                )
             if comp.y != vttcomp.y:
                 raise VTTLibInvalidComposite(
                     "Component %d in '%s' has wrong y offset: expected"
-                    " %d, found %d." % (i, name, comp.y, vttcomp.y))
-            if (check_flags and (
-                    (comp.flags & ROUND_XY_TO_GRID and
-                     not vttcomp.round_to_grid) or
-                    (not comp.flags & ROUND_XY_TO_GRID and
-                     vttcomp.round_to_grid))):
+                    " %d, found %d." % (i, name, comp.y, vttcomp.y)
+                )
+            if check_flags and (
+                (comp.flags & ROUND_XY_TO_GRID and not vttcomp.round_to_grid)
+                or (not comp.flags & ROUND_XY_TO_GRID and vttcomp.round_to_grid)
+            ):
                 raise VTTLibInvalidComposite(
                     "Component %d in '%s' has wrong 'ROUND_XY_TO_GRID' flag."
-                    % (i, name))
+                    % (i, name)
+                )
         if not check_flags:
             continue
-        if ((comp.flags & USE_MY_METRICS and not vttcomp.use_my_metrics) or
-                (not comp.flags & USE_MY_METRICS and vttcomp.use_my_metrics)):
+        if (comp.flags & USE_MY_METRICS and not vttcomp.use_my_metrics) or (
+            not comp.flags & USE_MY_METRICS and vttcomp.use_my_metrics
+        ):
             raise VTTLibInvalidComposite(
-                "Component %d in '%s' has wrong 'USE_MY_METRICS' flag."
-                % (i, name))
-        if ((comp.flags & SCALED_COMPONENT_OFFSET and
-                not vttcomp.scaled_offset) or
-                (not comp.flags & SCALED_COMPONENT_OFFSET and
-                 vttcomp.scaled_offset)):
+                "Component %d in '%s' has wrong 'USE_MY_METRICS' flag." % (i, name)
+            )
+        if (comp.flags & SCALED_COMPONENT_OFFSET and not vttcomp.scaled_offset) or (
+            not comp.flags & SCALED_COMPONENT_OFFSET and vttcomp.scaled_offset
+        ):
             raise VTTLibInvalidComposite(
                 "Component %d in '%s' has wrong 'SCALED_COMPONENT_OFFSET' flag."
-                % (i, name))
-        if ((comp.flags & UNSCALED_COMPONENT_OFFSET and
-                not vttcomp.scaled_offset) or
-                (not comp.flags & UNSCALED_COMPONENT_OFFSET and
-                 vttcomp.scaled_offset)):
+                % (i, name)
+            )
+        if (comp.flags & UNSCALED_COMPONENT_OFFSET and not vttcomp.scaled_offset) or (
+            not comp.flags & UNSCALED_COMPONENT_OFFSET and vttcomp.scaled_offset
+        ):
             raise VTTLibInvalidComposite(
                 "Component %d in '%s' has wrong 'UNSCALED_COMPONENT_OFFSET' flag."
-                "flag" % (i, name))
+                "flag" % (i, name)
+            )
 
 
 _use_my_metrics = r"^USEMYMETRICS\[\][\r\n]?"
@@ -601,9 +619,9 @@ _scaled_component_offset = r"^(?:UN)?SCALEDCOMPONENTOFFSET\[\][\r\n]?"
 _anchor = r"^ANCHOR\[\](?:, *-?[0-9]+){3}[\r\n]?"
 _offset = r"^OFFSET\[[rR]\](?:, *-?[0-9]+){3}[\r\n]?"
 composite_info_RE = re.compile(
-    "(%s)|(%s)|(%s)|(%s)|(%s)" % (
-        _use_my_metrics, _overlap, _scaled_component_offset, _anchor, _offset
-    ), re.MULTILINE
+    "(%s)|(%s)|(%s)|(%s)|(%s)"
+    % (_use_my_metrics, _overlap, _scaled_component_offset, _anchor, _offset),
+    re.MULTILINE,
 )
 
 
@@ -649,13 +667,15 @@ def write_composite_info(glyph, glyph_order, data="", vtt_version=6):
             if comp.flags & UNSCALED_COMPONENT_OFFSET:
                 instructions.append("UNSCALEDCOMPONENTOFFSET[]\n")
         index = glyph_order.index(comp.glyphName)
-        if hasattr(comp, 'firstPt'):
-            instructions.append("ANCHOR[], %d, %d, %d\n"
-                                % (index, comp.firstPt, comp.secondPt))
+        if hasattr(comp, "firstPt"):
+            instructions.append(
+                "ANCHOR[], %d, %d, %d\n" % (index, comp.firstPt, comp.secondPt)
+            )
         else:
             flag = "R" if comp.flags & ROUND_XY_TO_GRID else "r"
             instructions.append(
-                "OFFSET[%s], %d, %d, %d\n" % (flag, index, comp.x, comp.y))
+                "OFFSET[%s], %d, %d, %d\n" % (flag, index, comp.x, comp.y)
+            )
     return head, "".join(instructions), tail
 
 
@@ -663,7 +683,7 @@ def update_composites(font, glyphs=None, vtt_version=6):
     glyph_order = font.getGlyphOrder()
     if glyphs is None:
         glyphs = glyph_order
-    glyf_table = font['glyf']
+    glyf_table = font["glyf"]
     for glyph_name in glyphs:
         glyph = glyf_table[glyph_name]
         vtt_components = []
@@ -685,11 +705,11 @@ def update_composites(font, glyphs=None, vtt_version=6):
             if vtt_components:
                 log.warning(
                     "Glyph '%s' contains components in VTT assembly but not"
-                    "in glyf table; drop assembly" % glyph_name)
+                    "in glyf table; drop assembly" % glyph_name
+                )
                 set_glyph_assembly(font, glyph_name, "")
             continue
-        new_data = "".join(write_composite_info(
-            glyph, glyph_order, data, vtt_version))
+        new_data = "".join(write_composite_info(glyph, glyph_order, data, vtt_version))
         set_glyph_assembly(font, glyph_name, new_data)
 
 
@@ -709,7 +729,7 @@ def compile_instructions(font, ship=True):
         font[tag].program = make_program(data, tag)
 
     glyph_order = font.getGlyphOrder()
-    glyf_table = font['glyf']
+    glyf_table = font["glyf"]
     for glyph_name in glyph_order:
         try:
             data = get_glyph_assembly(font, glyph_name)
@@ -723,11 +743,11 @@ def compile_instructions(font, ship=True):
                     log.warning(
                         "Glyph '%s' contains components in VTT assembly but "
                         "not in glyf table; drop assembly and skip "
-                        "compilation" % glyph_name)
+                        "compilation" % glyph_name
+                    )
                     set_glyph_assembly(font, glyph_name, "")
                 else:
-                    check_composite_info(
-                        glyph_name, glyph, components, glyph_order)
+                    check_composite_info(glyph_name, glyph, components, glyph_order)
                     set_components_flags(glyph, components)
             if program:
                 glyph.program = program
@@ -740,35 +760,36 @@ def compile_instructions(font, ship=True):
 
 def read_maxp_data_from_lib(ufo, ttfont):
     lib = read_plist(os.path.join(ufo, "lib.plist"), default={})
-    maxp = ttfont['maxp']
+    maxp = ttfont["maxp"]
     found = False
     for key in MAXP_SUB_KEYS:
         if key in lib:
             name = key[MAXP_KEY_LEN:]
             value = lib[key]
             setattr(maxp, name, value)
-            log.debug("maxp.%s = %s" % (name, value))
+            log.debug("maxp.{} = {}".format(name, value))
             found = True
     return found
 
 
 def read_maxp_data(ufo, ttfont):
     if read_maxp_data_from_lib(ufo, ttfont):
-        log.warning('storing maxp in lib.plist is deprecated; '
-                    'use data folder instead')
+        log.warning(
+            "storing maxp in lib.plist is deprecated; " "use data folder instead"
+        )
         return
 
     data = read_plist(os.path.join(ufo, "data", VTTLIB_DATA), default={})
-    if not data or 'maxp' not in data:
+    if not data or "maxp" not in data:
         log.debug("No 'maxp' data found")
         return
 
-    values = data['maxp']
-    maxp = ttfont['maxp']
+    values = data["maxp"]
+    maxp = ttfont["maxp"]
     for name in MAXP_ATTRS:
         value = values[name]
         setattr(maxp, name, value)
-        log.debug("maxp.%s = %s" % (name, value))
+        log.debug("maxp.{} = {}".format(name, value))
 
 
 def write_maxp_data(font, ufo):
@@ -785,20 +806,21 @@ def write_maxp_data(font, ufo):
         if ufonormalizer:
             ufonormalizer.normalizeLibPlist(ufo)
 
-    maxp = font['maxp']
-    data = {'maxp': {}}
+    maxp = font["maxp"]
+    data = {"maxp": {}}
     for name in MAXP_ATTRS:
-        data['maxp'][name] = getattr(maxp, name)
+        data["maxp"][name] = getattr(maxp, name)
     write_plist(data, os.path.join(ufo, "data", VTTLIB_DATA))
 
 
-comment_re = r'/\*%s\*/[\r\n]*'
+comment_re = r"/\*%s\*/[\r\n]*"
 # strip the timestamps
-gui_generated_re = re.compile(comment_re % (r' GUI generated .*?'))
+gui_generated_re = re.compile(comment_re % (r" GUI generated .*?"))
 vtt_compiler_re = re.compile(  # keep the VTT version
-    comment_re % (r' (VTT [0-9]+\.[0-9][0-9A-Z]* compiler) .*?'))
+    comment_re % (r" (VTT [0-9]+\.[0-9][0-9A-Z]* compiler) .*?")
+)
 # strip glyph indexes
-glyph_re = re.compile(comment_re % (r' (?:TT|VTTTalk) glyph [0-9]+.*?'))
+glyph_re = re.compile(comment_re % (r" (?:TT|VTTTalk) glyph [0-9]+.*?"))
 
 
 def normalize_vtt_programs(font):
@@ -808,7 +830,7 @@ def normalize_vtt_programs(font):
         except KeyError:
             # extra program missing; nothing to normalize
             continue
-        program = vtt_compiler_re.sub(r'/* \1 */\n', program)
+        program = vtt_compiler_re.sub(r"/* \1 */\n", program)
         set_extra_assembly(font, tag, program)
 
     glyph_order = font.getGlyphOrder()
@@ -819,14 +841,14 @@ def normalize_vtt_programs(font):
             except KeyError:
                 continue
             if is_talk:
-                program = gui_generated_re.sub('', program)
-            program = vtt_compiler_re.sub(r'/* \1 */\r', program)
-            program = glyph_re.sub('', program)
+                program = gui_generated_re.sub("", program)
+            program = vtt_compiler_re.sub(r"/* \1 */\r", program)
+            program = glyph_re.sub("", program)
             set_vtt_program(font, name, program, is_talk, is_glyph=True)
 
-    if len(font['TSI3'].extraPrograms):
+    if len(font["TSI3"].extraPrograms):
         # VTT sometimes stores 'reserved' data in TSI3 which isn't needed
-        font['TSI3'].extraPrograms = {}
+        font["TSI3"].extraPrograms = {}
 
 
 def read_ufo_contents(ufopath):
@@ -837,7 +859,8 @@ def read_ufo_contents(ufopath):
         if not os.path.isfile(fullfilename):
             raise ValueError(
                 "contents.plist references a file that does not exist: %s"
-                % fullfilename)
+                % fullfilename
+            )
     return contents
 
 
@@ -862,8 +885,7 @@ def check_ufo_version(ufo, minimum=3):
         raise VTTLibArgumentError("Not a valid UFO file: %s" % e)
     else:
         if ufo_version < minimum:
-            raise VTTLibArgumentError(
-                "Unsupported UFO format: %d" % ufo_version)
+            raise VTTLibArgumentError("Unsupported UFO format: %d" % ufo_version)
 
 
 def vtt_dump(infile, outfile=None, **kwargs):
@@ -876,8 +898,7 @@ def vtt_dump(infile, outfile=None, **kwargs):
         raise VTTLibArgumentError("Not a TrueType font (bad sfntVersion)")
     for table_tag in VTT_TABLES:
         if table_tag not in font:
-            raise VTTLibArgumentError(
-                "Table '%s' not found in input font" % table_tag)
+            raise VTTLibArgumentError("Table '%s' not found in input font" % table_tag)
 
     if not outfile:
         ufo = os.path.splitext(infile)[0] + ".ufo"
@@ -904,9 +925,9 @@ def vtt_dump(infile, outfile=None, **kwargs):
     for tag in VTT_TABLES:
         # dump each table individually instead of using 'splitTables'
         # to avoid creating an extra index file
-        outfile = os.path.join(folder, tagToIdentifier(tag) + '.ttx')
+        outfile = os.path.join(folder, tagToIdentifier(tag) + ".ttx")
         # always use Unix LF newlines
-        font.saveXML(outfile, tables=[tag], newlinestr='\n')
+        font.saveXML(outfile, tables=[tag], newlinestr="\n")
 
     write_maxp_data(font, ufo)
 
@@ -943,8 +964,9 @@ def vtt_merge(infile, outfile=None, **kwargs):
     font.save(outfile)
 
 
-def vtt_compile(infile, outfile=None, ship=False, inplace=None,
-                force_overwrite=False, **kwargs):
+def vtt_compile(
+    infile, outfile=None, ship=False, inplace=None, force_overwrite=False, **kwargs
+):
     font = TTFont(infile)
 
     if outfile:
@@ -959,6 +981,7 @@ def vtt_compile(infile, outfile=None, ship=False, inplace=None,
     else:
         # create new unique output file
         from fontTools.ttx import makeOutputFileName
+
         outfile = makeOutputFileName(infile, None, ".ttf")
 
     compile_instructions(font, ship=ship)

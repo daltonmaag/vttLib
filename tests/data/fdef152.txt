@@ -126,7 +126,7 @@ SWAP[]
     POP[]
     #PUSH, 0, BZEnd /* End */
 
-    JMPR[], (BZEnd=#LEndFn) 
+    JMPR[], (BZEnd=#LEndFn)
 
   EIF[]
   ROLL[]
