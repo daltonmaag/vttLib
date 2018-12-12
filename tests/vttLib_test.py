@@ -98,7 +98,7 @@ class TestTransformAssembly(object):
                 DUP[]
                 DUP[]
                 DUP[]
-            """
+                """
             ).strip()
         )
 
