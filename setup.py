@@ -1,37 +1,9 @@
-import sys
 import setuptools
 
-
-name = "vttLib"
-description = "Compile Visual TrueType assembly with FontTools."
-
-needs_pytest = {'pytest', 'test'}.intersection(sys.argv)
-pytest_runner = ['pytest_runner'] if needs_pytest else []
-needs_wheel = {'release', 'bdist_wheel'}.intersection(sys.argv)
-wheel = ['wheel'] if needs_wheel else []
-
-setup_params = dict(
-    name=name,
+setuptools.setup(
     use_scm_version=True,
-    description=description,
-    author="Dalton Maag Ltd",
-    author_email="info@daltonmaag.com",
-    license="MIT",
+    # Do package discovery here until https://github.com/pypa/setuptools/issues/1136
+    # is fixed or Python 2 support is dropped.
     package_dir={"": "src"},
     packages=setuptools.find_packages("src"),
-    include_package_data=True,
-    install_requires=[
-        'fonttools>=3.16.0',
-        'pyparsing>=2.1.5',
-    ],
-    setup_requires=[
-        'setuptools_scm>=1.9',
-    ] + pytest_runner + wheel,
-    tests_require=[
-        'pytest>=2.8',
-    ],
 )
-
-
-if __name__ == '__main__':
-    setuptools.setup(**setup_params)

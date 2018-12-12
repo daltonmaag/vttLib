@@ -1,18 +1,23 @@
 sudo: false
 language: python
-python:
-  - "2.7"
-  - "3.6"
-install: pip install tox-travis
+matrix:
+  include:
+    - python: 2.7
+      env:
+       - TOXENV=py27
+    - python: 3.6
+      env:
+        - TOXENV=py36
+    - python: 3.6
+      env:
+        - TOXENV=fix-lint
+install: pip install tox
 script: tox
-before_deploy: tox -e bdist
 deploy:
   provider: releases
   api_key:
     secure: bdYmdmVZlbcl0n6hUlVFWijD/0zPtYJqpgmhtOPgIzlF7tux9FXXxeQ2nTT1uIamBi62lE006Ygq8tY86umv2ruNao7QpuPG/S0P7rO7Nd1XbJxz5PuDkC4473YXrF2pqhQJIJ+syRA31bIiyhfRhyzKEotyAL7wzZ4W788DZx0w900RSO4ebM+l/gufY6oWhWYYnPu/qDq4DDgG5C7TdNQeIRyAAni/3EyqkatzoMmSiBaVz9DnbRKzpBK+gMeuBY8iQ1xxA8CEa1GWym+qzlWXW42tSul+KKahcp6oTW0NVPMXtk4Yf+N7deJaccth2NPFC+Ed9U0qNRAK/6tsaSv0EKKvyy3BkaqVO8uBDnOh462fQdI01DZBVJutPs0BkL0WiAeb1HYfdDpbGU9kViCRWyCsMGrGHsgUbttTe81kGyQxVYHWa7J3y5ity7DWMEnXrHMeVzp15l1+6ikIur1wLmMfBmLwKdRWGvUbBJwlQlZHLpBby/zRtcYnPKGG3oe1iyDu2bQxuVHBB05mSlNSKO2+jWylWb6/x4Ujm5yAVeIQjhqnSPHx1m+CMtEM946w+01eodrw97AzPpQHZNTNRbVdzdqDNg77Va0spMyy5YUK3pijgYEwwVTXpXrYrsW73LFvjSa1z+0nLz8oWVkDyD1Wc4ZibI611QwCSD0=
-  skip_cleanup: true
-  file_glob: true
-  file: "dist/*"
+  distributions: sdist bdist_wheel
   on:
     repo: daltonmaag/vttLib
     tags: true
