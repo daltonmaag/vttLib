@@ -46,9 +46,18 @@ def test_merge_data_from_lib_keys(tmp_path, test_ufo_UbuTestData):
 
 def _test_roundtrip(font, ufo):
     font_tsi1_extra = font["TSI1"].extraPrograms
-    assert ufo.lib["com.daltonmaag.vttLib.tsi1.cvt"] == font_tsi1_extra["cvt"]
-    assert ufo.lib["com.daltonmaag.vttLib.tsi1.fpgm"] == font_tsi1_extra["fpgm"]
-    assert ufo.lib["com.daltonmaag.vttLib.tsi1.ppgm"] == font_tsi1_extra["ppgm"]
+    assert (
+        ufo.lib["com.daltonmaag.vttLib.tsi1.cvt"].replace("\n", "\r")
+        == font_tsi1_extra["cvt"]
+    )
+    assert (
+        ufo.lib["com.daltonmaag.vttLib.tsi1.fpgm"].replace("\n", "\r")
+        == font_tsi1_extra["fpgm"]
+    )
+    assert (
+        ufo.lib["com.daltonmaag.vttLib.tsi1.ppgm"].replace("\n", "\r")
+        == font_tsi1_extra["ppgm"]
+    )
 
     for attr in vttLib.MAXP_ATTRS:
         lib_key = f"com.robofont.robohint.maxp.{attr}"
@@ -65,9 +74,13 @@ def _test_roundtrip(font, ufo):
 
     for glyph in ufo:
         if glyph.name in font_tsi1_glyphs:
-            glyph.lib[glyph_tsi1_key] == font_tsi1_glyphs[glyph.name]
+            glyph.lib[glyph_tsi1_key].replace("\n", "\r") == font_tsi1_glyphs[
+                glyph.name
+            ]
         if glyph.name in font_tsi3_glyphs:
-            glyph.lib[glyph_tsi3_key] == font_tsi3_glyphs[glyph.name]
+            glyph.lib[glyph_tsi3_key].replace("\n", "\r") == font_tsi3_glyphs[
+                glyph.name
+            ]
 
     for unwanted_data in vttLib.LEGACY_VTT_DATA_FILES:
         assert unwanted_data not in ufo.data.keys()

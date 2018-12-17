@@ -25,7 +25,9 @@ def dump_to_lib_keys(font, ufo):
     for extra_program in vttLib.TSI1_EXTRA_PROGRAMS:
         if extra_program in font_tsi1.extraPrograms:
             lib_key = f"com.daltonmaag.vttLib.tsi1.{extra_program}"
-            ufo.lib[lib_key] = font_tsi1.extraPrograms[extra_program]
+            ufo.lib[lib_key] = font_tsi1.extraPrograms[extra_program].replace(
+                "\r", "\n"
+            )
 
     font_maxp = font["maxp"]
     for attr in vttLib.MAXP_ATTRS:
@@ -38,7 +40,7 @@ def dump_to_lib_keys(font, ufo):
     glyph_tsi1_key = "com.daltonmaag.vttLib.tsi1.glyphProgram"
     for glyph_name, data in font_tsi1_glyphs.items():
         if glyph_name in ufo:
-            ufo[glyph_name].lib[glyph_tsi1_key] = data
+            ufo[glyph_name].lib[glyph_tsi1_key] = data.replace("\r", "\n")
         else:
             logger.warning(
                 f"TSI1 table contains code for glyph '{glyph_name}' that is not in UFO '{ufo.path}'"
@@ -48,7 +50,7 @@ def dump_to_lib_keys(font, ufo):
     glyph_tsi3_key = "com.daltonmaag.vttLib.tsi3.glyphProgram"
     for glyph_name, data in font_tsi3_glyphs.items():
         if glyph_name in ufo:
-            ufo[glyph_name].lib[glyph_tsi3_key] = data
+            ufo[glyph_name].lib[glyph_tsi3_key] = data.replace("\r", "\n")
         else:
             logger.warning(
                 f"TSI3 table contains code for glyph '{glyph_name}' that is not in UFO '{ufo.path}'"
@@ -69,7 +71,9 @@ def merge_from_lib_keys(ufo, font):
     for extra_program in vttLib.TSI1_EXTRA_PROGRAMS:
         lib_key = f"com.daltonmaag.vttLib.tsi1.{extra_program}"
         if lib_key in ufo.lib:
-            font_tsi1.extraPrograms[extra_program] = ufo.lib[lib_key]
+            font_tsi1.extraPrograms[extra_program] = ufo.lib[lib_key].replace(
+                "\n", "\r"
+            )
 
     if "TSI3" not in font:
         font["TSI2"] = fontTools.ttLib.newTable("TSI2")
@@ -82,9 +86,13 @@ def merge_from_lib_keys(ufo, font):
     glyph_tsi3_key = "com.daltonmaag.vttLib.tsi3.glyphProgram"
     for glyph in ufo:
         if glyph_tsi1_key in glyph.lib:
-            font_tsi1.glyphPrograms[glyph.name] = glyph.lib[glyph_tsi1_key]
+            font_tsi1.glyphPrograms[glyph.name] = glyph.lib[glyph_tsi1_key].replace(
+                "\n", "\r"
+            )
         if glyph_tsi3_key in glyph.lib:
-            font_tsi3.glyphPrograms[glyph.name] = glyph.lib[glyph_tsi3_key]
+            font_tsi3.glyphPrograms[glyph.name] = glyph.lib[glyph_tsi3_key].replace(
+                "\n", "\r"
+            )
 
     if "TSI5" not in font:
         font["TSI5"] = fontTools.ttLib.newTable("TSI5")
