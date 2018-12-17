@@ -5,5 +5,12 @@
 #    pip-compile --output-file requirements.txt setup.py
 #
 
-fonttools==3.33.0
+appdirs==1.4.3            # via fs
+attrs==18.2.0             # via ufolib2
+fonttools[lxml,ufo]==3.34.0
+fs==2.1.2                 # via fonttools
+lxml==4.2.5               # via fonttools
 pyparsing==2.3.0
+pytz==2018.7              # via fs
+six==1.12.0               # via fs
+ufolib2==0.3.0

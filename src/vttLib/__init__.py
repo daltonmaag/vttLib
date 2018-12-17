@@ -3,13 +3,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import array
 import errno
 import glob
+import io
 import logging
 import os
-import plistlib
 import re
 import shutil
 from collections import OrderedDict, defaultdict, deque, namedtuple
 
+import ufoLib2
+import vttLib.transfer
 from fontTools.misc.py23 import StringIO, basestring, tobytes, tostr
 from fontTools.ttLib import (
     TTFont,
@@ -27,43 +29,10 @@ from fontTools.ttLib.tables._g_l_y_f import (
 from fontTools.ttLib.tables.ttProgram import Program
 from vttLib.parser import AssemblyParser, ParseException
 
-try:
-    import ufonormalizer
-except:
-    ufonormalizer = None
-
-
-if hasattr(plistlib, "load"):
-    # PY3
-    _plist_load = plistlib.load
-    _plist_dump = plistlib.dump
-else:
-    # PY2
-    _plist_load = plistlib.readPlist  # type: ignore
-    _plist_dump = plistlib.writePlist  # type: ignore
-
-
-def read_plist(path, default=None):
-    try:
-        with open(path, "rb") as fp:
-            return _plist_load(fp)
-    except IOError as e:
-        if e.errno != errno.ENOENT or default is None:
-            raise
-        return default
-
-
-def write_plist(value, path):
-    with open(path, "wb") as fp:
-        _plist_dump(value, fp)
-
 
 log = logging.getLogger(__name__)
 
 
-VTT_TABLES = ["TSI0", "TSI1", "TSI2", "TSI3", "TSI5"]
-TTX_DATA_FOLDER = "com.github.fonttools.ttx"
-VTTLIB_DATA = "com.daltonmaag.vttLib.plist"
 MAXP_KEY = "com.robofont.robohint.maxp"
 MAXP_ATTRS = {
     "maxZones",
@@ -74,8 +43,15 @@ MAXP_ATTRS = {
     "maxStackElements",
     "maxSizeOfInstructions",
 }
-MAXP_KEY_LEN = len(MAXP_KEY) + 1  # includes the '.'
-MAXP_SUB_KEYS = {MAXP_KEY + "." + k for k in MAXP_ATTRS}
+LEGACY_VTT_DATA_FILES = (
+    "com.daltonmaag.vttLib.plist",
+    "com.github.fonttools.ttx/T_S_I__0.ttx",
+    "com.github.fonttools.ttx/T_S_I__1.ttx",
+    "com.github.fonttools.ttx/T_S_I__2.ttx",
+    "com.github.fonttools.ttx/T_S_I__3.ttx",
+    "com.github.fonttools.ttx/T_S_I__5.ttx",
+)
+TSI1_EXTRA_PROGRAMS = ("cvt", "fpgm", "ppgm")
 
 
 class VTTLibError(TTLibError):
@@ -758,61 +734,6 @@ def compile_instructions(font, ship=True):
                 del font[tag]
 
 
-def read_maxp_data_from_lib(ufo, ttfont):
-    lib = read_plist(os.path.join(ufo, "lib.plist"), default={})
-    maxp = ttfont["maxp"]
-    found = False
-    for key in MAXP_SUB_KEYS:
-        if key in lib:
-            name = key[MAXP_KEY_LEN:]
-            value = lib[key]
-            setattr(maxp, name, value)
-            log.debug("maxp.{} = {}".format(name, value))
-            found = True
-    return found
-
-
-def read_maxp_data(ufo, ttfont):
-    if read_maxp_data_from_lib(ufo, ttfont):
-        log.warning(
-            "storing maxp in lib.plist is deprecated; " "use data folder instead"
-        )
-        return
-
-    data = read_plist(os.path.join(ufo, "data", VTTLIB_DATA), default={})
-    if not data or "maxp" not in data:
-        log.debug("No 'maxp' data found")
-        return
-
-    values = data["maxp"]
-    maxp = ttfont["maxp"]
-    for name in MAXP_ATTRS:
-        value = values[name]
-        setattr(maxp, name, value)
-        log.debug("maxp.{} = {}".format(name, value))
-
-
-def write_maxp_data(font, ufo):
-    libfilename = os.path.join(ufo, "lib.plist")
-    lib = read_plist(libfilename, default={})
-    updated = False
-    for key in MAXP_SUB_KEYS:
-        if key in lib:
-            del lib[key]
-            log.warning("removed deprecated '%s' in lib.plist" % key)
-            updated = True
-    if updated:
-        write_plist(lib, libfilename)
-        if ufonormalizer:
-            ufonormalizer.normalizeLibPlist(ufo)
-
-    maxp = font["maxp"]
-    data = {"maxp": {}}
-    for name in MAXP_ATTRS:
-        data["maxp"][name] = getattr(maxp, name)
-    write_plist(data, os.path.join(ufo, "data", VTTLIB_DATA))
-
-
 comment_re = r"/\*%s\*/[\r\n]*"
 # strip the timestamps
 gui_generated_re = re.compile(comment_re % (r" GUI generated .*?"))
@@ -851,19 +772,6 @@ def normalize_vtt_programs(font):
         font["TSI3"].extraPrograms = {}
 
 
-def read_ufo_contents(ufopath):
-    glyphs_dir = os.path.join(ufopath, "glyphs")
-    contents = read_plist(os.path.join(glyphs_dir, "contents.plist"))
-    for name, filename in contents.items():
-        fullfilename = os.path.join(glyphs_dir, filename)
-        if not os.path.isfile(fullfilename):
-            raise ValueError(
-                "contents.plist references a file that does not exist: %s"
-                % fullfilename
-            )
-    return contents
-
-
 def subset_vtt_glyph_programs(font, glyph_names):
     for tag in ("TSI1", "TSI3"):
         programs = font[tag].glyphPrograms
@@ -877,67 +785,29 @@ def subset_vtt_glyph_programs(font, glyph_names):
             del groups[name]
 
 
-def check_ufo_version(ufo, minimum=3):
-    try:
-        metainfo = read_plist(os.path.join(ufo, "metainfo.plist"))
-        ufo_version = int(metainfo["formatVersion"])
-    except (IOError, KeyError, ValueError) as e:
-        raise VTTLibArgumentError("Not a valid UFO file: %s" % e)
-    else:
-        if ufo_version < minimum:
-            raise VTTLibArgumentError("Unsupported UFO format: %d" % ufo_version)
-
-
 def vtt_dump(infile, outfile=None, **kwargs):
+    """Write VTT data from a TTF to a UFO."""
     if not os.path.exists(infile):
         raise VTTLibArgumentError("'%s' not found" % infile)
 
-    font = TTFont(infile)
-
-    if font.sfntVersion not in ("\x00\x01\x00\x00", "true"):
-        raise VTTLibArgumentError("Not a TrueType font (bad sfntVersion)")
-    for table_tag in VTT_TABLES:
-        if table_tag not in font:
-            raise VTTLibArgumentError("Table '%s' not found in input font" % table_tag)
-
     if not outfile:
-        ufo = os.path.splitext(infile)[0] + ".ufo"
+        ufo_dir = os.path.splitext(infile)[0] + ".ufo"
     else:
-        ufo = outfile
-    if not os.path.exists(ufo) or not os.path.isdir(ufo):
-        raise VTTLibArgumentError("No such directory: '%s'" % ufo)
+        ufo_dir = outfile
+    if not os.path.exists(ufo_dir) or not os.path.isdir(ufo_dir):
+        raise VTTLibArgumentError("No such directory: '%s'" % ufo_dir)
 
-    check_ufo_version(ufo)
-
-    folder = os.path.join(ufo, "data", TTX_DATA_FOLDER)
-    # create data sub-folder if it doesn't exist already
-    try:
-        os.makedirs(folder)
-    except OSError as e:
-        if e.errno != errno.EEXIST or not os.path.isdir(folder):
-            raise
-
-    normalize_vtt_programs(font)
-
-    ufo_contents = read_ufo_contents(ufo)
-    subset_vtt_glyph_programs(font, list(ufo_contents))
-
-    for tag in VTT_TABLES:
-        # dump each table individually instead of using 'splitTables'
-        # to avoid creating an extra index file
-        outfile = os.path.join(folder, tagToIdentifier(tag) + ".ttx")
-        # always use Unix LF newlines
-        font.saveXML(outfile, tables=[tag], newlinestr="\n")
-
-    write_maxp_data(font, ufo)
+    font = TTFont(infile)
+    ufo = ufoLib2.Font.open(ufo_dir)
+    vttLib.transfer.dump_to_lib_keys(font, ufo)
+    vttLib.transfer.clean_vtt_data_files(ufo)
+    ufo.save()
 
 
 def vtt_merge(infile, outfile=None, **kwargs):
-    ufo = infile
-    if not os.path.exists(ufo) or not os.path.isdir(ufo):
-        raise VTTLibArgumentError("No such directory: '%s'" % ufo)
-
-    check_ufo_version(ufo)
+    """Write VTT data from a UFO to a TTF."""
+    if not os.path.exists(infile) or not os.path.isdir(infile):
+        raise VTTLibArgumentError("No such directory: '%s'" % infile)
 
     if not outfile:
         outfile = os.path.splitext(infile)[0] + ".ttf"
@@ -945,21 +815,11 @@ def vtt_merge(infile, outfile=None, **kwargs):
         raise VTTLibArgumentError("'%s' not found" % outfile)
 
     font = TTFont(outfile)
-    if font.sfntVersion not in ("\x00\x01\x00\x00", "true"):
-        raise VTTLibArgumentError("Not a TrueType font (bad sfntVersion)")
-
-    for ttx in glob.glob(os.path.join(ufo, "data", TTX_DATA_FOLDER, "*.ttx")):
-        identifier = os.path.splitext(os.path.basename(ttx))[0]
-        try:
-            tag = identifierToTag(identifier)
-        except:
-            continue
-        else:
-            if tag not in VTT_TABLES:
-                continue
-        font.importXML(ttx)
-
-    read_maxp_data(ufo, font)
+    ufo = ufoLib2.Font.open(infile)
+    if any(legacy_data in ufo.data for legacy_data in LEGACY_VTT_DATA_FILES):
+        vttLib.transfer.merge_from_data_files(ufo, font)
+    else:
+        vttLib.transfer.merge_from_lib_keys(ufo, font)
 
     font.save(outfile)
 
