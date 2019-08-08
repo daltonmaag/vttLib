@@ -1,8 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import array
-import errno
-import glob
 import io
 import logging
 import os
@@ -11,8 +7,6 @@ import shutil
 from collections import OrderedDict, defaultdict, deque, namedtuple
 
 import ufoLib2
-import vttLib.transfer
-from fontTools.misc.py23 import StringIO, basestring, tobytes, tostr
 from fontTools.ttLib import (
     TTFont,
     TTLibError,
@@ -27,8 +21,9 @@ from fontTools.ttLib.tables._g_l_y_f import (
     USE_MY_METRICS,
 )
 from fontTools.ttLib.tables.ttProgram import Program
-from vttLib.parser import AssemblyParser, ParseException
 
+import vttLib.transfer
+from vttLib.parser import AssemblyParser, ParseException
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +63,7 @@ class VTTLibArgumentError(VTTLibError):
 
 def set_cvt_table(font, data):
     data = re.sub(r"/\*.*?\*/", "", data, flags=re.DOTALL)
-    values = array.array(tostr("h"))
+    values = array.array("h")
     # control values are defined in VTT Control Program as colon-separated
     # INDEX: VALUE pairs
     for m in re.finditer(r"^\s*([0-9]+)\s*:\s*(-?[0-9]+)", data, re.MULTILINE):
@@ -250,7 +245,7 @@ def transform(tokens, components=None):
 
             column = 1
             for args in push_groups:
-                is_variable = isinstance(args[0], basestring)
+                is_variable = isinstance(args[0], str)
                 if is_variable:
                     # initialize jump variables with the row and column in which
                     # they appear in the stream
@@ -393,7 +388,7 @@ def pformat_tti(program, preserve=True):
     from fontTools.ttLib.tables.ttProgram import _pushCountPat
 
     assembly = program.getAssembly(preserve=preserve)
-    stream = StringIO()
+    stream = io.StringIO()
     i = 0
     indent = 0
     nInstr = len(assembly)
