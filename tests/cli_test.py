@@ -32,8 +32,8 @@ def test_move_ufo_data_to_file_and_roundtrip(tmp_path, test_ufo_UbuTestData):
     ###
     ufo_tmp = ufoLib2.Font.open(ufo_path)
 
-    for unwanted_data in vttLib.LEGACY_VTT_DATA_FILES:
-        assert unwanted_data not in ufo_tmp.data.keys()
+    for legacy_data in vttLib.LEGACY_VTT_DATA_FILES:
+        assert legacy_data in ufo_tmp.data.keys()
 
     ttx_dump = fontTools.ttLib.TTFont()
     ttx_dump.importXML(test_ttx_path)

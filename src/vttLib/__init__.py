@@ -820,7 +820,6 @@ def vtt_move_ufo_data_to_file(infile, outfile=None, **_):
 
     ufo = ufoLib2.Font.open(infile)
     vttLib.transfer.copy_from_ufo_data_to_file(ufo, outfile)
-    vttLib.transfer.clean_vtt_data_files(ufo)
     ufo.save()
 
 

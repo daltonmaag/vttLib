@@ -91,9 +91,3 @@ def copy_from_ufo_data_to_file(ufo, path: os.PathLike):
                     setattr(maxp, name, value)
 
     dump_to_file(font, path)
-
-
-def clean_vtt_data_files(ufo):
-    for unwanted_data in vttLib.LEGACY_VTT_DATA_FILES:
-        if unwanted_data in ufo.data:
-            del ufo.data[unwanted_data]

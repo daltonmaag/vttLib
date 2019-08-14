@@ -21,7 +21,7 @@ def main(args=None):
     )
     parser_mergefile = parser_group.add_parser(
         "mergefile",
-        description="Write VTT source data stored in a TTX dump into a TTF.",
+        description="Import VTT source data stored in a TTX dump into a TTF.",
     )
     parser_compile = parser_group.add_parser(
         "compile",
@@ -30,7 +30,7 @@ def main(args=None):
         ),
     )
     parser_dumpfile_from_ufo = parser_group.add_parser(
-        "dumpfile_from_ufo", description="Dump VTT data from UFO3 data to a TTX dump."
+        "dumpfile_from_ufo", description="Export VTT data from UFO3 data to a TTX dump."
     )
     for subparser in (
         parser_compile,
