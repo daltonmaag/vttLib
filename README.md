@@ -18,3 +18,11 @@ This package is not yet on PyPI, because... uh...
 $ pip install git+https://github.com/daltonmaag/vttLib.git
 $ python -m vttLib --help
 ```
+
+# Making a Release
+
+This is currently not automated.
+
+1. Tag a new version
+2. `python3 setup.py bdist_wheel`
+3. Manually transfer `dist/*.whl` to internal package repository.
