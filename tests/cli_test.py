@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import fontTools.ttLib
@@ -59,3 +60,28 @@ def test_move_ufo_data_to_file_and_roundtrip(tmp_path, test_ufo_UbuTestData):
     ttf = fontTools.ttLib.TTFont(test_ttf_path)
     assert "fpgm" in ttf
     assert "TSI1" not in ttf
+
+
+def test_roundtrip_TSIC_cvar(tmp_path: Path, original_shared_datadir: Path) -> None:
+    font_file = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttf"
+    font_file_tmp = tmp_path / "NotoSans-MM-ASCII-VF.ttf"
+    font_file_vtt = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttx"
+    font_file_vtt_tmp = tmp_path / "NotoSans-MM-ASCII-VF.ttx"
+    shutil.copyfile(font_file, font_file_tmp)
+
+    vttLib.__main__.main(["mergefile", str(font_file_vtt), str(font_file_tmp)])
+
+    font = fontTools.ttLib.TTFont(font_file_tmp)
+    assert "TSIC" in font
+    assert "cvar" in font
+
+    vttLib.__main__.main(["dumpfile", str(font_file_tmp), str(font_file_vtt_tmp)])
+    assert font_file_vtt.read_text() == font_file_vtt_tmp.read_text()
+
+    vttLib.__main__.main(["compile", str(font_file_tmp), str(font_file_tmp), "--ship"])
+    font = fontTools.ttLib.TTFont(font_file_tmp)
+    assert "fpgm" in font
+    assert "cvar" in font
+    assert "cvt " in font
+    assert "TSI1" not in font
+    assert "TSIC" not in font
