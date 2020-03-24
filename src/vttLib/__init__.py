@@ -727,7 +727,7 @@ def compile_instructions(font, ship=True):
                 glyph.program = program
 
     if ship:
-        for tag in ("TSI%d" % i for i in (0, 1, 2, 3, 5)):
+        for tag in ("TSI%s" % i for i in (0, 1, 2, 3, 5, "C")):
             if tag in font:
                 del font[tag]
 
