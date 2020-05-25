@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ttFont sfntVersion="\x00\x01\x00\x00" ttLibVersion="3.44">
+
+  <TSI1>
+
+    <glyphProgram name=".notdef">
+/* VTT 6.33 compiler */
+SVTCA[Y]
+MDAP[R], 0
+MDAP[R], 1
+CALL[], 1, 7, 106
+CALL[], 0, 4, 106
+IUP[Y]
+IUP[X]
+
+    </glyphProgram>
+
+    <extraProgram name="cvt">
+/* Control Program */
+/* ACT generated Thu Mar 12 12:24:50 2020 */
+    </extraProgram>
+
+    <extraProgram name="fpgm">
+/* Font-program */
+/* ACT generated Thu Mar 12 12:24:50 2020 */
+
+    </extraProgram>
+
+  </TSI1>
+
+  <TSI3>
+
+    <glyphProgram name=".notdef">
+/* VTTTalk Unicode 0xffff */
+/* ACT generated Thu Mar 12 12:24:50 2020 */
+
+/* Auto-Hinting Light */
+
+/* ***Settings*** */
+/* ModeHinting = LightLatin */
+/* ToAnchorBottom = true */
+
+
+/* CVT 0 18  DISABLED for a NON-LATIN glyph */
+/* CVT 1 16  DISABLED for a NON-LATIN glyph */
+/* Min and Max */
+YAnchor(0)	/* min */
+YAnchor(1)	/* max */
+
+/* YDir: Stroke #0 */
+ResYDist(1,7) /*perpendicular to the stroke*/
+
+/* YDir: Stroke #1 */
+ResYDist(0,4) /*perpendicular to the stroke*/
+
+Smooth()
+
+    </glyphProgram>
+
+  </TSI3>
+
+  <TSI5>
+    <glyphgroup name=".notdef" value="1"/>
+    <glyphgroup name="A" value="2"/>
+    <glyphgroup name="B" value="2"/>
+    <glyphgroup name="C" value="2"/>
+    <glyphgroup name="D" value="2"/>
+    <glyphgroup name="E" value="2"/>
+    <glyphgroup name="F" value="2"/>
+    <glyphgroup name="G" value="2"/>
+    <glyphgroup name="H" value="2"/>
+    <glyphgroup name="I" value="2"/>
+    <glyphgroup name="J" value="2"/>
+    <glyphgroup name="K" value="2"/>
+    <glyphgroup name="L" value="2"/>
+    <glyphgroup name="M" value="2"/>
+    <glyphgroup name="N" value="2"/>
+    <glyphgroup name="O" value="2"/>
+    <glyphgroup name="P" value="2"/>
+    <glyphgroup name="Q" value="2"/>
+    <glyphgroup name="R" value="2"/>
+    <glyphgroup name="S" value="2"/>
+    <glyphgroup name="T" value="2"/>
+    <glyphgroup name="U" value="2"/>
+    <glyphgroup name="V" value="2"/>
+    <glyphgroup name="W" value="2"/>
+    <glyphgroup name="X" value="2"/>
+    <glyphgroup name="Y" value="2"/>
+    <glyphgroup name="Z" value="2"/>
+    <glyphgroup name="a" value="3"/>
+    <glyphgroup name="ampersand" value="1"/>
+    <glyphgroup name="asciicircum" value="1"/>
+    <glyphgroup name="asciitilde" value="1"/>
+    <glyphgroup name="asterisk" value="1"/>
+    <glyphgroup name="at" value="1"/>
+    <glyphgroup name="b" value="3"/>
+    <glyphgroup name="backslash" value="1"/>
+    <glyphgroup name="bar" value="1"/>
+    <glyphgroup name="braceleft" value="1"/>
+    <glyphgroup name="braceright" value="1"/>
+    <glyphgroup name="bracketleft" value="1"/>
+    <glyphgroup name="bracketright" value="1"/>
+    <glyphgroup name="c" value="3"/>
+    <glyphgroup name="colon" value="1"/>
+    <glyphgroup name="comma" value="1"/>
+    <glyphgroup name="d" value="3"/>
+    <glyphgroup name="dollar" value="4"/>
+    <glyphgroup name="e" value="3"/>
+    <glyphgroup name="eight" value="4"/>
+    <glyphgroup name="equal" value="1"/>
+    <glyphgroup name="exclam" value="1"/>
+    <glyphgroup name="f" value="3"/>
+    <glyphgroup name="five" value="4"/>
+    <glyphgroup name="four" value="4"/>
+    <glyphgroup name="g" value="3"/>
+    <glyphgroup name="grave" value="1"/>
+    <glyphgroup name="greater" value="1"/>
+    <glyphgroup name="h" value="3"/>
+    <glyphgroup name="hyphen" value="1"/>
+    <glyphgroup name="i" value="3"/>
+    <glyphgroup name="j" value="3"/>
+    <glyphgroup name="k" value="3"/>
+    <glyphgroup name="l" value="3"/>
+    <glyphgroup name="less" value="1"/>
+    <glyphgroup name="m" value="3"/>
+    <glyphgroup name="n" value="3"/>
+    <glyphgroup name="nine" value="4"/>
+    <glyphgroup name="numbersign" value="1"/>
+    <glyphgroup name="o" value="3"/>
+    <glyphgroup name="one" value="4"/>
+    <glyphgroup name="p" value="3"/>
+    <glyphgroup name="parenleft" value="1"/>
+    <glyphgroup name="parenright" value="1"/>
+    <glyphgroup name="percent" value="1"/>
+    <glyphgroup name="period" value="1"/>
+    <glyphgroup name="plus" value="1"/>
+    <glyphgroup name="q" value="3"/>
+    <glyphgroup name="question" value="1"/>
+    <glyphgroup name="quotedbl" value="1"/>
+    <glyphgroup name="quotesingle" value="1"/>
+    <glyphgroup name="r" value="3"/>
+    <glyphgroup name="s" value="3"/>
+    <glyphgroup name="semicolon" value="1"/>
+    <glyphgroup name="seven" value="4"/>
+    <glyphgroup name="six" value="4"/>
+    <glyphgroup name="slash" value="1"/>
+    <glyphgroup name="space" value="1"/>
+    <glyphgroup name="t" value="3"/>
+    <glyphgroup name="three" value="4"/>
+    <glyphgroup name="two" value="4"/>
+    <glyphgroup name="u" value="3"/>
+    <glyphgroup name="underscore" value="1"/>
+    <glyphgroup name="v" value="3"/>
+    <glyphgroup name="w" value="3"/>
+    <glyphgroup name="x" value="3"/>
+    <glyphgroup name="y" value="3"/>
+    <glyphgroup name="z" value="3"/>
+    <glyphgroup name="zero" value="4"/>
+  </TSI5>
+
+  <maxp>
+    <!-- Most of this table will be recalculated by the compiler -->
+    <tableVersion value="0x10000"/>
+    <numGlyphs value="9999"/>
+    <maxPoints value="9999"/>
+    <maxContours value="9999"/>
+    <maxCompositePoints value="9999"/>
+    <maxCompositeContours value="9999"/>
+    <maxZones value="9999"/>
+    <maxTwilightPoints value="9999"/>
+    <maxStorage value="9999"/>
+    <maxFunctionDefs value="9999"/>
+    <maxInstructionDefs value="9999"/>
+    <maxStackElements value="9999"/>
+    <maxSizeOfInstructions value="9999"/>
+    <maxComponentElements value="9999"/>
+    <maxComponentDepth value="9999"/>
+  </maxp>
+
+</ttFont>
