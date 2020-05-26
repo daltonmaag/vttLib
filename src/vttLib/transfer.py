@@ -4,6 +4,7 @@ import os
 
 import fontTools
 import fontTools.ttLib
+import ufoLib2
 
 import vttLib
 
@@ -76,7 +77,7 @@ def merge_from_file(font: fontTools.ttLib.TTFont, path: os.PathLike) -> None:
         setattr(font["maxp"], maxp_attr, getattr(ttx_dump["maxp"], maxp_attr))
 
 
-def copy_from_ufo_data_to_file(ufo, path: os.PathLike) -> None:
+def copy_from_ufo_data_to_file(ufo: ufoLib2.Font, path: os.PathLike) -> None:
     """Dump VTT data stored in a UFO's data/ structure into a file.
 
     This is used to convert data from Legacy Projects to The New Way.

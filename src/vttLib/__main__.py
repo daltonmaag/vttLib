@@ -1,9 +1,6 @@
 import logging
-import os
 import sys
 from argparse import ArgumentParser
-
-import fontTools.ttLib
 
 import vttLib
 

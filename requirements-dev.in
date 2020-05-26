@@ -1,0 +1,7 @@
+black
+coverage
+flake8
+isort[pyproject]
+mypy
+pytest
+ufo2ft

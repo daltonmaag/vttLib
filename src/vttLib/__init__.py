@@ -3,17 +3,10 @@ import io
 import logging
 import os
 import re
-import shutil
 from collections import OrderedDict, defaultdict, deque, namedtuple
 
 import ufoLib2
-from fontTools.ttLib import (
-    TTFont,
-    TTLibError,
-    identifierToTag,
-    newTable,
-    tagToIdentifier,
-)
+from fontTools.ttLib import TTFont, TTLibError, newTable
 from fontTools.ttLib.tables._g_l_y_f import (
     ROUND_XY_TO_GRID,
     SCALED_COMPONENT_OFFSET,
@@ -26,7 +19,7 @@ import vttLib.transfer
 from vttLib.parser import AssemblyParser, ParseException
 
 try:
-    from ._version import version as __version__
+    from ._version import version as __version__  # type: ignore
 except ImportError:
     __version__ = "0.0.0+unknown"
 

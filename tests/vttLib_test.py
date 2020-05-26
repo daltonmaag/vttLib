@@ -2,6 +2,7 @@ import os
 from textwrap import dedent
 
 import pytest
+
 from vttLib import make_ft_program, pformat_tti, transform_assembly
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")

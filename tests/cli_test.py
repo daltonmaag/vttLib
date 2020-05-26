@@ -51,10 +51,10 @@ def test_move_ufo_data_to_file_and_roundtrip(tmp_path, test_ufo_UbuTestData):
     vttLib.__main__.main(["mergefile", str(test_ttx_path), str(test_ttf_path)])
     vttLib.__main__.main(["dumpfile", str(test_ttf_path), str(tmp_path / "test2.ttx")])
 
-    assert (
-        Path(tmp_path / "test.ttx").read_text()
-        == Path(tmp_path / "test2.ttx").read_text()
-    )
+    # Cut out the first two lines with version information for the comparison.
+    dump_before = Path(tmp_path / "test.ttx").read_text().split("\n", 2)[-1]
+    dump_after = Path(tmp_path / "test2.ttx").read_text().split("\n", 2)[-1]
+    assert dump_before == dump_after
 
     vttLib.__main__.main(["compile", str(test_ttf_path), str(test_ttf_path), "--ship"])
     ttf = fontTools.ttLib.TTFont(test_ttf_path)
@@ -76,7 +76,10 @@ def test_roundtrip_TSIC_cvar(tmp_path: Path, original_shared_datadir: Path) -> N
     assert "cvar" in font
 
     vttLib.__main__.main(["dumpfile", str(font_file_tmp), str(font_file_vtt_tmp)])
-    assert font_file_vtt.read_text() == font_file_vtt_tmp.read_text()
+    # Cut out the first two lines with version information for the comparison.
+    dump_before = font_file_vtt.read_text().split("\n", 2)[-1]
+    dump_after = font_file_vtt_tmp.read_text().split("\n", 2)[-1]
+    assert dump_before == dump_after
 
     vttLib.__main__.main(["compile", str(font_file_tmp), str(font_file_tmp), "--ship"])
     font = fontTools.ttLib.TTFont(font_file_tmp)

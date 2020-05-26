@@ -1,3 +1,17 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=40.7", "wheel", "setuptools_scm"]
+requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
+
+[tool.setuptools_scm]
+write_to = "src/vttLib/_version.py"
+
+[tool.black]
+target-version = ["py36"]
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+known_first_party = "vttLib"
