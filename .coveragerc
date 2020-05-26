@@ -7,8 +7,7 @@ source = vttLib
 [paths]
 source =
     src/vttLib
-    .tox/*/lib/python*/site-packages/vttLib
-    .tox/*/Lib/site-packages/vttLib
+    */site-packages/vttLib
 
 [report]
 # Regexes for lines to exclude from consideration
