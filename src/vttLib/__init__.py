@@ -107,7 +107,7 @@ def split_functions(fpgm_tokens):
     tokens = iter(fpgm_tokens)
     for t in tokens:
         mnemonic = t.mnemonic
-        if mnemonic.startswith("FDEF"):
+        if mnemonic.startswith("FDEF") or mnemonic.startswith("IDEF"):
             body = [t]
             for t in tokens:
                 body.append(t)
@@ -127,6 +127,7 @@ def merge_functions(functions, include=None):
     for line in "\n".join(functions).splitlines():
         asm.extend(line.strip().split())
     funcs = {}
+    idefs = {}
     stack = []
     tokens = iter(asm)
     for token in tokens:
@@ -137,14 +138,18 @@ def merge_functions(functions, include=None):
                     stack.append(num)
                 except ValueError:
                     break
-        if token.startswith("FDEF"):
+        if token.startswith("FDEF") or token.startswith("IDEF"):
+            is_fdef = token.startswith("FDEF")
             num = stack.pop()
             body = [token]
             for token in tokens:
                 body.append(token)
                 if token.startswith("ENDF"):
                     break
-            funcs[num] = body
+            if is_fdef:
+                funcs[num] = body
+            else:
+                idefs[num] = body
             continue
         assert 0, "Unexpected token in fpgm: %s" % token
     if include is not None:
@@ -153,6 +158,10 @@ def merge_functions(functions, include=None):
     result = ["PUSH[]"] + [str(n) for n in sorted(funcs, reverse=True)]
     for num in sorted(funcs):
         result.extend(funcs[num])
+    result.append("PUSH[]")
+    result.extend([str(n) for n in sorted(idefs, reverse=True)])
+    for num in sorted(idefs):
+        result.extend(idefs[num])
     return result
 
 
