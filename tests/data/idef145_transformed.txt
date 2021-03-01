@@ -1,0 +1,6 @@
+PUSHB[ ]
+145
+IDEF[ ]	/* InstructionDefinition */
+PUSHB[ ]	/* 2 values pushed */
+0 0
+ENDF[ ]	/* EndFunctionDefinition */

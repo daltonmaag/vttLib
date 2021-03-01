@@ -1,0 +1,6 @@
+/* define GETVARIATION in case this OS doesn't have it */
+IDEF[],145
+#BEGIN
+#PUSH,0, 0
+#END
+ENDF[]
