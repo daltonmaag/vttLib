@@ -3,7 +3,8 @@ from textwrap import dedent
 
 import pytest
 
-from vttLib import make_ft_program, pformat_tti, transform_assembly
+from vttLib import make_ft_program, pformat_tti, transform_assembly, vtt_compile, vtt_merge_file
+from fontTools.ttLib import TTFont
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
 
@@ -175,3 +176,20 @@ class TestTransformAssembly(object):
         generated = pformat_tti(ft_program)
 
         assert expected == generated
+
+def test_TSIC_compile(tmp_path, original_shared_datadir):
+    import shutil
+    orig_ttf = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttf"
+    orig_ttx = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttx"
+    before_ttf = tmp_path / "before.ttf"
+    after_ttf = tmp_path / "after.ttf"
+
+    shutil.copyfile(orig_ttf, before_ttf)
+    vtt_merge_file(orig_ttx, before_ttf)
+
+    shutil.copyfile(before_ttf, after_ttf)
+    vtt_compile(after_ttf)
+
+    before_font = TTFont(before_ttf)
+    after_font = TTFont(after_ttf)
+    assert before_font['cvar'] == after_font['cvar']
