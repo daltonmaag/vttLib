@@ -320,17 +320,17 @@ def transform(tokens, components=None):
                 for i in reversed(t.stack_items):
                     stream[push_indexes[-1]].appendleft(i)
             else:
-                assert not t.stack_items or 'PUSH' in mnemonic
+                assert not t.stack_items or "PUSH" in mnemonic
 
                 # While it is true that most instructions cannot take stack
                 # parameters in #PUSHOFF mode, you can have PUSHx[] and NPUSHx[]
                 # instructions that do have parameters that need to get onto the
-                # stack. (ok, technically, they're not parameters to put on the 
+                # stack. (ok, technically, they are not parameters to put on the
                 # stack but data items in the instruction stream).
                 # If the current instruction is a kind of PUSH, emit the
                 # instruction with its stack parameters (excluding the count for
                 # NPUSHx instructions as fontTools computes that).
-                if t.stack_items: 
+                if t.stack_items:
                     if mnemonic.startswith("NPUSH"):
                         params = t.stack_items[1:]
                     elif mnemonic.startswith("PUSH"):
