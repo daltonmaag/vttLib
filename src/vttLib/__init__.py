@@ -138,7 +138,7 @@ def merge_functions(functions, include=None):
                     stack.append(num)
                 except ValueError:
                     break
-        if token.startswith("FDEF") or token.startswith("IDEF"):
+        if token.startswith(("FDEF", "IDEF")):
             is_fdef = token.startswith("FDEF")
             num = stack.pop()
             body = [token]
