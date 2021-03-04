@@ -8,7 +8,7 @@ from vttLib import make_ft_program, pformat_tti, transform_assembly
 DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
 
 
-TEST_NAMES = ["fdef83", "fdef133", "fdef152", "fdef153", "idef145"]
+TEST_NAMES = ["fdef83", "fdef133", "fdef152", "fdef153", "idef145", "pushoff_pushes"]
 
 
 @pytest.fixture(params=TEST_NAMES)
