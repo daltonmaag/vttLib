@@ -1,0 +1,16 @@
+PUSHW[ ]        /* 1 value pushed */
+-11
+PUSHB[ ]        /* 2 values pushed */
+22 33
+PUSHB[ ]        /* 2 values pushed */
+1 2
+PUSHW[ ]        /* 2 values pushed */
+4000 5000
+NPUSHB[ ]       /* 3 values pushed */
+70 80 90
+NPUSHW[ ]       /* 3 values pushed */
+-10 -20 4000
+PUSHW[ ]        /* 1 value pushed */
+-10
+PUSHB[ ]        /* 2 values pushed */
+20 30
