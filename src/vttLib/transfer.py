@@ -50,7 +50,7 @@ def dump_to_file(font: fontTools.ttLib.TTFont, path: os.PathLike) -> None:
     font.saveXML(path, tables=tables_to_dump)
 
 
-def merge_from_file(font: fontTools.ttLib.TTFont, path: os.PathLike) -> None:
+def merge_from_file(font: fontTools.ttLib.TTFont, path: os.PathLike, keep_cvar: bool = False) -> None:
     """Merge VTT data from TTX dump into TTFont object.
 
     The 'maxp' table is only partially merged, as we want to import only data
@@ -60,12 +60,17 @@ def merge_from_file(font: fontTools.ttLib.TTFont, path: os.PathLike) -> None:
         raise vttLib.VTTLibArgumentError("'maxp' table not found in target font.")
 
     TABLES_TO_MERGE = ("TSI0", "TSI1", "TSI2", "TSI3", "TSI5")
-    TABLES_TO_MERGE_OPTIONAL = ("TSIC", "cvt ", "cvar")
+    TABLES_TO_MERGE_OPTIONAL = ("TSIC", "cvt ")
+    if keep_cvar:
+        TABLES_TO_MERGE_OPTIONAL += ("cvar",)
 
     ttx_dump = fontTools.ttLib.TTFont()
     ttx_dump.importXML(path)  # Import here so we can selectively merge maxp into font.
     ttx_dump["TSI0"] = fontTools.ttLib.newTable("TSI0")
     ttx_dump["TSI2"] = fontTools.ttLib.newTable("TSI2")
+
+    if keep_cvar and 'cvar' not in ttx_dump:
+        vttLib.log.warning("The keep_cvar option was specified, but the TTX file did not include a cvar table.")
 
     for tsi_table in TABLES_TO_MERGE:
         font[tsi_table] = ttx_dump[tsi_table]

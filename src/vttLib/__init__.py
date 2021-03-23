@@ -710,15 +710,17 @@ def update_composites(font, glyphs=None, vtt_version=6):
         set_glyph_assembly(font, glyph_name, new_data)
 
 
-def compile_instructions(font, ship=True):
+def compile_instructions(font, ship=True, keep_cvar=False):
     if "glyf" not in font:
         raise VTTLibError("Missing 'glyf' table; not a TrueType font")
     if "TSI1" not in font:
         raise VTTLibError("The font contains no 'TSI1' table")
+    if keep_cvar and 'cvar' not in font:
+        raise VTTLibError("The keep_cvar parameter is set, but cvar table exists in the font")
 
     control_program = get_extra_assembly(font, "cvt")
     set_cvt_table(font, control_program)
-    if "TSIC" in font:
+    if "TSIC" in font and not keep_cvar:
         # Compile TSIC
         tsic = font["TSIC"].table
         cvts = font["cvt "].values
@@ -858,7 +860,7 @@ def vtt_dump_file(infile, outfile=None, **_):
     vttLib.transfer.dump_to_file(font, outfile)
 
 
-def vtt_merge_file(infile, outfile=None, **_):
+def vtt_merge_file(infile, outfile=None, keep_cvar=False, **_):
     """Write VTT data from a TTX dump to a TTF."""
     if not os.path.exists(infile):
         raise vttLib.VTTLibArgumentError("Input file '%s' not found" % infile)
@@ -867,7 +869,7 @@ def vtt_merge_file(infile, outfile=None, **_):
         raise vttLib.VTTLibArgumentError("Output file '%s' not found" % outfile)
 
     font = TTFont(outfile)
-    vttLib.transfer.merge_from_file(font, infile)
+    vttLib.transfer.merge_from_file(font, infile, keep_cvar=keep_cvar)
     font.save(outfile)
 
 
@@ -887,12 +889,15 @@ def vtt_move_ufo_data_to_file(infile, outfile=None, **_):
 
 
 def vtt_compile(
-    infile, outfile=None, ship=False, inplace=None, force_overwrite=False, **_
+    infile, outfile=None, ship=False, inplace=None, force_overwrite=False, keep_cvar=False, **_
 ):
     if not os.path.exists(infile):
         raise vttLib.VTTLibArgumentError("Input TTF '%s' not found." % infile)
 
     font = TTFont(infile)
+
+    if keep_cvar and 'cvar' not in font:
+        raise vttLib.VTTLibArgumentError("The --keep-cvar option was specified, but no cvar table exists in the font")
 
     if outfile:
         pass
@@ -911,5 +916,5 @@ def vtt_compile(
 
         outfile = makeOutputFileName(infile, None, ".ttf")
 
-    vttLib.compile_instructions(font, ship=ship)
+    vttLib.compile_instructions(font, ship=ship, keep_cvar=keep_cvar)
     font.save(outfile)
