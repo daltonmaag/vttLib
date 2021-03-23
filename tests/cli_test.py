@@ -69,7 +69,9 @@ def test_roundtrip_TSIC_cvar(tmp_path: Path, original_shared_datadir: Path) -> N
     font_file_vtt_tmp = tmp_path / "NotoSans-MM-ASCII-VF.ttx"
     shutil.copyfile(font_file, font_file_tmp)
 
-    vttLib.__main__.main(["mergefile", "--keep-cvar", str(font_file_vtt), str(font_file_tmp)])
+    vttLib.__main__.main(
+        ["mergefile", "--keep-cvar", str(font_file_vtt), str(font_file_tmp)]
+    )
 
     font = fontTools.ttLib.TTFont(font_file_tmp)
     assert "TSIC" in font
@@ -96,7 +98,9 @@ def test_merge_keep_cvar(tmp_path: Path, original_shared_datadir: Path) -> None:
     font_file_vtt = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttx"
 
     shutil.copyfile(font_file, font_file_tmp)
-    vttLib.__main__.main(["mergefile", "--keep-cvar", str(font_file_vtt), str(font_file_tmp)])
+    vttLib.__main__.main(
+        ["mergefile", "--keep-cvar", str(font_file_vtt), str(font_file_tmp)]
+    )
     font = fontTools.ttLib.TTFont(font_file_tmp)
     assert "TSIC" in font
     assert "cvar" in font
@@ -110,20 +114,21 @@ def test_merge_keep_cvar(tmp_path: Path, original_shared_datadir: Path) -> None:
 
 def test_compile_keep_cvar(tmp_path: Path, original_shared_datadir: Path) -> None:
     font_file = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttf"
+    font_file_hints = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttx"
+    modified_TSIC = original_shared_datadir / "NotoSans-MM-ASCII-VF_diff_TSIC.ttx"
     font_file_tmp_merge = tmp_path / "NotoSans-MM-ASCII-VF.ttf"
     font_file_tmp_keep = tmp_path / "NotoSans-MM-ASCII-VF-keep.ttf"
     font_file_tmp_no_keep = tmp_path / "NotoSans-MM-ASCII-VF-no-keep.ttf"
-    font_file_vtt = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttx"
-    font_file_vtt_tmp = tmp_path / "NotoSans-MM-ASCII-VF.ttx"
-    modified_TSIC = original_shared_datadir / "NotoSans-MM-ASCII-VF_diff_TSIC.ttx"
     shutil.copyfile(font_file, font_file_tmp_merge)
 
     # Prepare the font, ensuring that the cvar in the font is derived from the
     # TSIC table from the font (currently, the Noto TTX file has a cvar that
     # doesn't match TSIC). (Assumes vttLib_test.py validates
     # vttLib.compile_instructions works)
-    vttLib.__main__.main(["mergefile", str(font_file_vtt), str(font_file_tmp_merge)])
-    vttLib.__main__.main(["compile", str(font_file_tmp_merge), str(font_file_tmp_merge)])
+    vttLib.__main__.main(["mergefile", str(font_file_hints), str(font_file_tmp_merge)])
+    vttLib.__main__.main(
+        ["compile", str(font_file_tmp_merge), str(font_file_tmp_merge)]
+    )
 
     font = fontTools.ttLib.TTFont(font_file_tmp_merge)
     assert "TSIC" in font
@@ -133,8 +138,18 @@ def test_compile_keep_cvar(tmp_path: Path, original_shared_datadir: Path) -> Non
     font.importXML(modified_TSIC)
     font.save(font_file_tmp_merge)
 
-    vttLib.__main__.main(["compile", "--keep-cvar", str(font_file_tmp_merge), str(font_file_tmp_keep), "--ship"])
-    vttLib.__main__.main(["compile", str(font_file_tmp_merge), str(font_file_tmp_no_keep), "--ship"])
+    vttLib.__main__.main(
+        [
+            "compile",
+            "--keep-cvar",
+            str(font_file_tmp_merge),
+            str(font_file_tmp_keep),
+            "--ship",
+        ]
+    )
+    vttLib.__main__.main(
+        ["compile", str(font_file_tmp_merge), str(font_file_tmp_no_keep), "--ship"]
+    )
     font_keep = fontTools.ttLib.TTFont(font_file_tmp_keep)
     font_no_keep = fontTools.ttLib.TTFont(font_file_tmp_no_keep)
     assert "fpgm" in font_keep
@@ -142,8 +157,8 @@ def test_compile_keep_cvar(tmp_path: Path, original_shared_datadir: Path) -> Non
     assert "cvt " in font_keep
     assert "TSI1" not in font_keep
     assert "TSIC" not in font_keep
-    assert font_keep['cvar'] != font_no_keep['cvar']
-    
+    assert font_keep["cvar"] != font_no_keep["cvar"]
+
 
 def test_maxp_selective_loading(tmp_path: Path, original_shared_datadir: Path) -> None:
     font_file = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttf"

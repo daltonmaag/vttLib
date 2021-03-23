@@ -188,9 +188,9 @@ class TestTransformAssembly(object):
 def test_TSIC_compile(tmp_path, original_shared_datadir):
     orig_ttf = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttf"
     orig_ttx = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttx"
-    vtt_ttx  = original_shared_datadir / "NotoSans-MM-ASCII-VF-VTT.ttx"
+    vtt_ttx = original_shared_datadir / "NotoSans-MM-ASCII-VF-VTT.ttx"
     vttLib_tmp_ttf = tmp_path / "NotoSans-MM-ASCII-VF.ttf"
-    vtt_tmp_ttf =    tmp_path / "NotoSans-MM-ASCII-VF-VTT.ttf"
+    vtt_tmp_ttf = tmp_path / "NotoSans-MM-ASCII-VF-VTT.ttf"
 
     # Font built by vttLib
     shutil.copyfile(orig_ttf, vttLib_tmp_ttf)
@@ -203,7 +203,7 @@ def test_TSIC_compile(tmp_path, original_shared_datadir):
 
     # Make sure they're the same
     vttLib_font = TTFont(vttLib_tmp_ttf)
-    vtt_font    = TTFont(vtt_tmp_ttf)
+    vtt_font = TTFont(vtt_tmp_ttf)
     assert "cvar" in vttLib_font
     assert "cvar" in vtt_font
     assert vttLib_font["cvar"] == vtt_font["cvar"]
