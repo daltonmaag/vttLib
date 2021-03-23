@@ -188,15 +188,22 @@ class TestTransformAssembly(object):
 def test_TSIC_compile(tmp_path, original_shared_datadir):
     orig_ttf = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttf"
     orig_ttx = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttx"
-    before_ttf = tmp_path / "before.ttf"
-    after_ttf = tmp_path / "after.ttf"
+    vtt_ttx  = original_shared_datadir / "NotoSans-MM-ASCII-VF-VTT.ttx"
+    vttLib_tmp_ttf = tmp_path / "NotoSans-MM-ASCII-VF.ttf"
+    vtt_tmp_ttf =    tmp_path / "NotoSans-MM-ASCII-VF-VTT.ttf"
 
-    shutil.copyfile(orig_ttf, before_ttf)
-    vtt_merge_file(orig_ttx, before_ttf)
+    # Font built by vttLib
+    shutil.copyfile(orig_ttf, vttLib_tmp_ttf)
+    vtt_merge_file(orig_ttx, vttLib_tmp_ttf, keep_cvar=True)
+    vtt_compile(vttLib_tmp_ttf, force_overwrite=True)
 
-    shutil.copyfile(before_ttf, after_ttf)
-    vtt_compile(after_ttf)
+    # Font built by VTT
+    shutil.copyfile(orig_ttf, vtt_tmp_ttf)
+    vtt_merge_file(vtt_ttx, vtt_tmp_ttf, keep_cvar=True)
 
-    before_font = TTFont(before_ttf)
-    after_font = TTFont(after_ttf)
-    assert before_font["cvar"] == after_font["cvar"]
+    # Make sure they're the same
+    vttLib_font = TTFont(vttLib_tmp_ttf)
+    vtt_font    = TTFont(vtt_tmp_ttf)
+    assert "cvar" in vttLib_font
+    assert "cvar" in vtt_font
+    assert vttLib_font["cvar"] == vtt_font["cvar"]
