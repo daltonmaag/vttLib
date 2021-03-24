@@ -194,7 +194,7 @@ def test_TSIC_compile(tmp_path, original_shared_datadir):
 
     # Font built by vttLib
     shutil.copyfile(orig_ttf, vttLib_tmp_ttf)
-    vtt_merge_file(orig_ttx, vttLib_tmp_ttf, keep_cvar=True)
+    vtt_merge_file(orig_ttx, vttLib_tmp_ttf)
     vtt_compile(vttLib_tmp_ttf, force_overwrite=True)
 
     # Font built by VTT
@@ -207,3 +207,6 @@ def test_TSIC_compile(tmp_path, original_shared_datadir):
     assert "cvar" in vttLib_font
     assert "cvar" in vtt_font
     assert vttLib_font["cvar"] == vtt_font["cvar"]
+    assert "cvt " in vttLib_font
+    assert "cvt " in vtt_font
+    assert vttLib_font["cvt "] == vtt_font["cvt "]

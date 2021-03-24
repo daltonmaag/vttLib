@@ -62,9 +62,9 @@ def merge_from_file(
         raise vttLib.VTTLibArgumentError("'maxp' table not found in target font.")
 
     TABLES_TO_MERGE = ("TSI0", "TSI1", "TSI2", "TSI3", "TSI5")
-    tables_to_merge_optional = ["TSIC", "cvt "]
+    tables_to_merge_optional = ["TSIC"]
     if keep_cvar:
-        tables_to_merge_optional.append("cvar")
+        tables_to_merge_optional.extend(["cvar", "cvt "])
 
     ttx_dump = fontTools.ttLib.TTFont()
     ttx_dump.importXML(path)  # Import here so we can selectively merge maxp into font.
