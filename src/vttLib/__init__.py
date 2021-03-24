@@ -717,7 +717,7 @@ def compile_instructions(font, ship=True, keep_cvar=False):
         raise VTTLibError("The font contains no 'TSI1' table")
     if keep_cvar and "cvar" not in font:
         raise VTTLibError(
-            "The keep_cvar parameter is set, but cvar table exists in the font"
+            "The keep_cvar parameter is set, but the cvar table is missing from the font"
         )
 
     control_program = get_extra_assembly(font, "cvt")
