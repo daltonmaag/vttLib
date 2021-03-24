@@ -53,7 +53,7 @@ def main(args=None):
     parser_dumpfile.add_argument("outfile", nargs="?", metavar="OUTPUT.ttx")
     parser_dumpfile.set_defaults(func=vttLib.vtt_dump_file)
 
-    parser_mergefile.add_argument("--keep-cvar", action="store_true", default=False)
+    parser_mergefile.add_argument("--keep-cvar", action="store_true")
     parser_mergefile.add_argument("infile", metavar="INPUT.ttx")
     parser_mergefile.add_argument("outfile", metavar="OUTPUT.ttf")
     parser_mergefile.set_defaults(func=vttLib.vtt_merge_file)
