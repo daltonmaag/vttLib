@@ -18,14 +18,12 @@ def dump_to_file(font: fontTools.ttLib.TTFont, path: os.PathLike) -> None:
     - TSI1 holds the assembly code
     - TSI3 holds the VTT code
     - TSI5 holds glyph group information
-    - TSIC holds data for the cvar table BUT IS NOT A STRICT SUPERSET (what I found
-      with a font is that there was data in cvar that was not in TSIC -- deleting cvar
-      and recompiling TSIC in VTT compiled a smaller cvar. So theoretically both can
-      contain the same data, but as of VTT 6.33 Beta they don't have to)
+    - TSIC holds data for the cvar table.
     - cvar holds deltas for the CV table.
     - maxp holds instruction data computed by VTT, among other data
 
-    TSI0 and TSI2 are filled in by fontTools.
+    TSI0 and TSI2 are filled in by fontTools. cvar can be rebuilt from TSIC but
+    is dumped for historical reasons.
     """
     tables_to_dump = ["TSI1", "TSI3", "TSI5", "maxp"]
 
