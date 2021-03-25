@@ -1,9 +1,17 @@
 import os
+import shutil
 from textwrap import dedent
 
 import pytest
+from fontTools.ttLib import TTFont
 
-from vttLib import make_ft_program, pformat_tti, transform_assembly
+from vttLib import (
+    make_ft_program,
+    pformat_tti,
+    transform_assembly,
+    vtt_compile,
+    vtt_merge_file,
+)
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
 
@@ -175,3 +183,30 @@ class TestTransformAssembly(object):
         generated = pformat_tti(ft_program)
 
         assert expected == generated
+
+
+def test_TSIC_compile(tmp_path, original_shared_datadir):
+    orig_ttf = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttf"
+    orig_ttx = original_shared_datadir / "NotoSans-MM-ASCII-VF.ttx"
+    vtt_ttx = original_shared_datadir / "NotoSans-MM-ASCII-VF-VTT.ttx"
+    vttLib_tmp_ttf = tmp_path / "NotoSans-MM-ASCII-VF.ttf"
+    vtt_tmp_ttf = tmp_path / "NotoSans-MM-ASCII-VF-VTT.ttf"
+
+    # Font built by vttLib
+    shutil.copyfile(orig_ttf, vttLib_tmp_ttf)
+    vtt_merge_file(orig_ttx, vttLib_tmp_ttf)
+    vtt_compile(vttLib_tmp_ttf, force_overwrite=True)
+
+    # Font built by VTT
+    shutil.copyfile(orig_ttf, vtt_tmp_ttf)
+    vtt_merge_file(vtt_ttx, vtt_tmp_ttf, keep_cvar=True)
+
+    # Make sure they're the same
+    vttLib_font = TTFont(vttLib_tmp_ttf)
+    vtt_font = TTFont(vtt_tmp_ttf)
+    assert "cvar" in vttLib_font
+    assert "cvar" in vtt_font
+    assert vttLib_font["cvar"] == vtt_font["cvar"]
+    assert "cvt " in vttLib_font
+    assert "cvt " in vtt_font
+    assert vttLib_font["cvt "] == vtt_font["cvt "]

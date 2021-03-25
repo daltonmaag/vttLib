@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ttFont sfntVersion="\x00\x01\x00\x00" ttLibVersion="4.4">
+
+  <TSIC>
+    <Version value="0x00010001"/>
+    <Flags value="0"/>
+    <!-- AxisCount=2 -->
+    <!-- RecordCount=2 -->
+    <Reserved value="0"/>
+    <AxisArray index="0" value="wght"/>
+    <AxisArray index="1" value="wdth"/>
+    <RecordLocations index="0">
+      <Axis index="0" value="0.62195"/>
+      <Axis index="1" value="0.0"/>
+    </RecordLocations>
+    <RecordLocations index="1">
+      <Axis index="0" value="1.0"/>
+      <Axis index="1" value="0.0"/>
+    </RecordLocations>
+    <Record index="0">
+      <Flags value="0"/>
+      <NumCVTEntries value="1"/>
+      <NameLength value="0"/>
+      <CVTArray index="0" value="0"/>
+      <CVTValueArray index="0" value="999"/>
+    </Record>
+    <Record index="1">
+      <Flags value="0"/>
+      <NumCVTEntries value="1"/>
+      <NameLength value="0"/>
+      <CVTArray index="0" value="11"/>
+      <CVTValueArray index="0" value="-99"/>
+    </Record>
+  </TSIC>
+
+</ttFont>
