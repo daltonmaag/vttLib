@@ -288,6 +288,7 @@ def transform(tokens, components=None):
             for point_index, rel_ppem, step_no in reversed(t.deltas):
                 deltas.setdefault(point_index, []).append((rel_ppem, step_no))
 
+            pairs = []
             for point_index, delta_specs in deltas.items():
                 for rel_ppem, step_no in sorted(delta_specs, reverse=True):
                     if mnemonic.startswith(("DELTAP", "DELTAC")):
@@ -302,10 +303,19 @@ def transform(tokens, components=None):
                             delta_base = 41
                         # subtract the default 'delta base'
                         rel_ppem -= delta_base
-                    stack.appendleft(point_index)
+                    # stack.appendleft(point_index)
                     # -8: 0, ... -1: 7, 1: 8, ... 8: 15
                     selector = (step_no + 7) if step_no > 0 else (step_no + 8)
-                    stack.appendleft((rel_ppem << 4) | selector)
+                    # stack.appendleft((rel_ppem << 4) | selector)
+                    pairs.append(((rel_ppem << 4) | selector, point_index))
+
+            # Reorder by exception spec, workaround for an issue where only the
+            # first delta is active when the spec/index pairs are ordered in a
+            # different way. This results in an order identical to what VTT does.
+            for spec, point_index in sorted(pairs, reverse=True):
+                stack.appendleft(point_index)
+                stack.appendleft(spec)
+
             if mnemonic.startswith("DLT"):
                 mnemonic = mnemonic.replace("DLT", "DELTA")
         elif mnemonic.startswith("#") and mnemonic.endswith(":"):
