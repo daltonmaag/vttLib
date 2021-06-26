@@ -303,10 +303,8 @@ def transform(tokens, components=None):
                             delta_base = 41
                         # subtract the default 'delta base'
                         rel_ppem -= delta_base
-                    # stack.appendleft(point_index)
                     # -8: 0, ... -1: 7, 1: 8, ... 8: 15
                     selector = (step_no + 7) if step_no > 0 else (step_no + 8)
-                    # stack.appendleft((rel_ppem << 4) | selector)
                     pairs.append(((rel_ppem << 4) | selector, point_index))
 
             # Reorder by exception spec, workaround for an issue where only the
