@@ -12,10 +12,12 @@ The primary use case is version control of hinting data of fonts.
 
 ## Installation and Usage
 
-This package is not yet on PyPI, because... uh...
+Installation requires a Python 3.6+ interpreter.
+
+Install in a virtual environment with:
 
 ```bash
-$ pip install git+https://github.com/daltonmaag/vttLib.git
+$ pip install vttLib
 $ python -m vttLib --help
 ```
 
