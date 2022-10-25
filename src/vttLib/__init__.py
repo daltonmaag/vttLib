@@ -6,8 +6,8 @@ import re
 from collections import OrderedDict, defaultdict, deque, namedtuple
 
 import ufoLib2
-from fontTools.misc.arrayTools import Vector
 from fontTools.misc.fixedTools import otRound
+from fontTools.misc.vector import Vector
 from fontTools.ttLib import TTFont, TTLibError, newTable
 from fontTools.ttLib.tables._g_l_y_f import (
     ROUND_XY_TO_GRID,
