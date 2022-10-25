@@ -1,7 +1,7 @@
 black
 coverage
 flake8
-isort[pyproject]
+isort
 mypy
 pytest
 ufo2ft
