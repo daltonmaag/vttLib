@@ -82,7 +82,10 @@ delta_spec = (
     + Optional(Literal("/8")).suppress()
 )
 
-delta = nestedExpr("(", ")", delta_spec, ignoreExpr=None)
+# NOTE: The type-ignore is weird, the docs at
+# https://pyparsing-docs.readthedocs.io/en/latest/pyparsing.html?highlight=nestedExpr#pyparsing.nested_expr
+# say that passing None is okay, but the typing says something else.
+delta = nestedExpr("(", ")", delta_spec, ignoreExpr=None)  # type: ignore
 
 deltas = Group(OneOrMore(delta)).setResultsName("deltas")
 
