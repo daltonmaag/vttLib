@@ -12,7 +12,7 @@ The primary use case is version control of hinting data of fonts.
 
 ## Installation and Usage
 
-Installation requires a Python 3.6+ interpreter.
+Installation requires a Python 3.7+ interpreter.
 
 Install in a virtual environment with:
 
