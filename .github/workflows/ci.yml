@@ -16,14 +16,16 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.x'
+    - name: Install packages
+      run: pip install tox
     - name: Lint
-      run: pipx run tox -e lint
+      run: tox -e lint
 
   test:
     runs-on: ${{ matrix.platform }}
     strategy:
       matrix:
-        python-version: ['3.7', '3.10']
+        python-version: ['3.7', '3.11']
         platform: [ubuntu-latest, windows-latest]
     steps:
     - uses: actions/checkout@v3
@@ -31,8 +33,10 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install packages
+      run: pip install tox
     - name: Run Tox
-      run: pipx run tox -e py-cov
+      run: tox -e py-cov
 
   deploy:
     # only run if the commit is tagged...
@@ -48,11 +52,13 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.x'
+    - name: Install packages
+      run: pip install build twine
     - name: Build and publish
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
-        pipx run build
-        pipx run twine check dist/*
-        pipx run twine upload dist/*
+        python -m build
+        twine check dist/*
+        twine upload dist/*
