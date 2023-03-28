@@ -1,17 +1,30 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
+requires = ["setuptools>=61", "setuptools_scm[toml]>=6.2"]
+
+[project]
+name = "vttLib"
+authors = [{ name = "Dalton Maag Ltd", email = "info@daltonmaag.com" }]
+description = "Compile Visual TrueType assembly with FontTools."
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+dependencies = [
+    "fonttools[ufo]>=4.0.0",
+    "pyparsing>=2.1.5",
+    "ufoLib2>=0.7.1",
+]
+dynamic = ["version"]
+
+[project.urls]
+Source = "https://github.com/daltonmaag/vttLib"
 
 [tool.setuptools_scm]
 write_to = "src/vttLib/_version.py"
 
 [tool.black]
-target-version = ["py36"]
+target-version = ["py37"]
 
 [tool.isort]
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-line_length = 88
+profile = "black"
 known_first_party = "vttLib"
