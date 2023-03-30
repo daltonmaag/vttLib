@@ -174,7 +174,7 @@ class TestTransformAssembly(object):
                 """
             ).strip()
         )
-    
+
     def test_delta_args_sorting(self):
 
         vtt_assembly = dedent(
