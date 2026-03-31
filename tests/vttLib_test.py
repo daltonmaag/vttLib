@@ -48,8 +48,7 @@ class TestTransformAssembly(object):
         assert not ft_assembly
 
     def test_jump_back(self):
-        vtt_assembly = dedent(
-            """
+        vtt_assembly = dedent("""
             #PUSH, 1
             DUP[]
             #Label1:
@@ -58,15 +57,11 @@ class TestTransformAssembly(object):
             DUP[]
             #PUSH, Var1
             JMPR[], (Var1=#Label1)
-            """
-        )
+            """)
 
         ft_assembly = transform_assembly(vtt_assembly)
 
-        assert (
-            ft_assembly
-            == dedent(
-                """
+        assert ft_assembly == dedent("""
                 PUSH[] 1
                 DUP[]
                 DUP[]
@@ -74,13 +69,10 @@ class TestTransformAssembly(object):
                 DUP[]
                 PUSHW[] -6
                 JMPR[]
-                """
-            ).strip()
-        )
+                """).strip()
 
     def test_jump_forward(self):
-        vtt_assembly = dedent(
-            """
+        vtt_assembly = dedent("""
             #PUSH, Var1
             JMPR[], (Var1=#Label1)
             DUP[]
@@ -90,15 +82,11 @@ class TestTransformAssembly(object):
             #Label1:
             DUP[]
             DUP[]
-            """
-        )
+            """)
 
         ft_assembly = transform_assembly(vtt_assembly)
 
-        assert (
-            ft_assembly
-            == dedent(
-                """
+        assert ft_assembly == dedent("""
                 PUSHW[] 7
                 JMPR[]
                 DUP[]
@@ -107,13 +95,10 @@ class TestTransformAssembly(object):
                 DUP[]
                 DUP[]
                 DUP[]
-                """
-            ).strip()
-        )
+                """).strip()
 
     def test_jump_mixed_args(self):
-        vtt_assembly = dedent(
-            """
+        vtt_assembly = dedent("""
             #PUSH, Var1, 1
             JROT[], (Var1=#Label1)
             DUP[]
@@ -121,15 +106,11 @@ class TestTransformAssembly(object):
             DUP[]
             #Label1:
             DUP[]
-            """
-        )
+            """)
 
         ft_assembly = transform_assembly(vtt_assembly)
 
-        assert (
-            ft_assembly
-            == dedent(
-                """
+        assert ft_assembly == dedent("""
                 PUSHW[] 4
                 PUSH[] 1
                 JROT[]
@@ -137,14 +118,11 @@ class TestTransformAssembly(object):
                 DUP[]
                 DUP[]
                 DUP[]
-                """
-            ).strip()
-        )
+                """).strip()
 
     def test_jump_repeated_args(self):
 
-        vtt_assembly = dedent(
-            """
+        vtt_assembly = dedent("""
             #PUSH, 0, Var1, Var1, -1
             POP[]
             SWAP[]
@@ -153,15 +131,11 @@ class TestTransformAssembly(object):
             DUP[]
             #Label1:
             DUP[]
-            """
-        )
+            """)
 
         ft_assembly = transform_assembly(vtt_assembly)
 
-        assert (
-            ft_assembly
-            == dedent(
-                """
+        assert ft_assembly == dedent("""
                 PUSH[] 0
                 PUSHW[] 3 3
                 PUSH[] -1
@@ -171,33 +145,24 @@ class TestTransformAssembly(object):
                 DUP[]
                 DUP[]
                 DUP[]
-                """
-            ).strip()
-        )
+                """).strip()
 
     def test_delta_args_sorting(self):
 
-        vtt_assembly = dedent(
-            """
+        vtt_assembly = dedent("""
             DLTC1[(4 @4 8) (4 @8 8) (4 @11 8) (4 @15 8) (5 @4 8) (5 @8 8) (5 @11 8) (5 @15 8) (12 @1 8) (12 @4 8) (12 @5 8) (12 @8 8) (12 @9 8) (12 @13 8) (12 @15 8) (12 @0 8) (13 @1 8) (13 @4 8) (13 @5 8) (13 @8 8) (13 @9 8) (13 @13 8) (13 @15 8) (13 @0 8) (14 @11 8) (14 @13 8) (14 @15 8) (15 @11 8) (15 @13 8) (15 @15 8)]
             DLTC2[(4 @3 8) (4 @6 8) (4 @7 8) (4 @10 8) (4 @14 8) (5 @3 8) (5 @6 8) (5 @7 8) (5 @10 8) (5 @14 8) (12 @1 8) (12 @3 8) (12 @4 8) (12 @5 8) (12 @9 8) (12 @13 8) (13 @1 8) (13 @3 8) (13 @4 8) (13 @5 8) (13 @9 8) (13 @13 8) (14 @1 8) (14 @3 8) (14 @5 8) (14 @7 8) (14 @9 8) (14 @11 8) (14 @13 8) (15 @1 8) (15 @3 8) (15 @5 8) (15 @7 8) (15 @9 8) (15 @11 8) (15 @13 8)]
             DLTC3[(4 @1 8) (4 @2 8) (4 @5 8) (5 @1 8) (5 @2 8) (5 @5 8) (12 @1 8) (12 @4 8) (13 @1 8) (13 @4 8) (14 @0 8) (14 @2 8) (14 @4 8) (15 @0 8) (15 @2 8) (15 @4 8)]
-            """
-        )
+            """)
 
         ft_assembly = transform_assembly(vtt_assembly)
 
-        assert (
-            ft_assembly
-            == dedent(
-                """
+        assert ft_assembly == dedent("""
                 PUSH[] 15 14 15 15 31 4 31 5 31 12 31 13 47 4 47 5 47 14 47 15 79 12 79 13 79 14 79 15 95 4 95 5 16 31 12 31 13 31 14 31 15 63 4 63 5 63 12 63 13 63 14 63 15 79 12 79 13 95 12 95 13 95 14 95 15 111 4 111 5 127 4 127 5 127 14 127 15 159 12 159 13 159 14 159 15 175 4 175 5 191 14 191 15 223 12 223 13 223 14 223 15 239 4 239 5 36 15 12 15 13 31 12 31 13 79 4 79 5 79 12 79 13 95 12 95 13 143 4 143 5 143 12 143 13 159 12 159 13 191 4 191 5 191 14 191 15 223 12 223 13 223 14 223 15 255 4 255 5 255 12 255 13 255 14 255 15 30
                 DELTAC1[]
                 DELTAC2[]
                 DELTAC3[]
-                """
-            ).strip()
-        )
+                """).strip()
 
     def test_end_to_end(self, input_and_expected):
         vtt_assembly, expected = input_and_expected
