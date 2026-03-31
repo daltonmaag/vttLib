@@ -7,7 +7,7 @@ name = "vttLib"
 authors = [{ name = "Dalton Maag Ltd", email = "info@daltonmaag.com" }]
 description = "Compile Visual TrueType assembly with FontTools."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 dependencies = [
     "fonttools[ufo]>=4.0.0",
@@ -23,7 +23,7 @@ Source = "https://github.com/daltonmaag/vttLib"
 write_to = "src/vttLib/_version.py"
 
 [tool.black]
-target-version = ["py39"]
+target-version = ["py310"]
 
 [tool.isort]
 profile = "black"
