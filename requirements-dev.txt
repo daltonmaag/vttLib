@@ -8,17 +8,15 @@ cffsubr==0.4.0
     # via ufo2ft
 click==8.3.1
     # via black
-colorama==0.4.6 ; sys_platform == 'win32'
-    # via
-    #   click
-    #   pytest
 coverage==7.13.5
     # via -r requirements-dev.in
+exceptiongroup==1.3.1
+    # via pytest
 flake8==7.3.0
     # via -r requirements-dev.in
 fontmath==0.10.0
     # via ufo2ft
-fonttools==4.62.1
+fonttools[ufo]==4.62.1
     # via
     #   booleanoperations
     #   cffsubr
@@ -28,7 +26,7 @@ iniconfig==2.3.0
     # via pytest
 isort==8.0.1
     # via -r requirements-dev.in
-librt==0.8.1 ; platform_python_implementation != 'PyPy'
+librt==0.8.1
     # via mypy
 mccabe==0.7.0
     # via flake8
@@ -58,11 +56,19 @@ pyflakes==3.4.0
     # via flake8
 pygments==2.20.0
     # via pytest
-pytest==9.0.2
+pytest==9.0.3
     # via -r requirements-dev.in
 pytokens==0.4.1
     # via black
+tomli==2.4.1
+    # via
+    #   black
+    #   mypy
+    #   pytest
 typing-extensions==4.15.0
-    # via mypy
+    # via
+    #   black
+    #   exceptiongroup
+    #   mypy
 ufo2ft==3.7.1
     # via -r requirements-dev.in
