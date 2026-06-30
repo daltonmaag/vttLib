@@ -169,8 +169,8 @@ def merge_functions(functions, include=None):
     return result
 
 
-def tokenize(data, parseAll=True):
-    return AssemblyParser.parseString(data, parseAll=parseAll)
+def tokenize(data, parse_all=True):
+    return AssemblyParser.parse_string(data, parse_all=parse_all)
 
 
 def transform(tokens, components=None):
