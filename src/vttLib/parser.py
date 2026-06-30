@@ -13,11 +13,11 @@ from pyparsing import (
     alphanums,
     alphas,
     cStyleComment,
-    nestedExpr,
+    nested_expr,
     nums,
-    oneOf,
+    one_of,
     pyparsing_common,
-    tokenMap,
+    token_map,
 )
 
 __all__ = ["AssemblyParser", "ParseException"]
@@ -51,27 +51,27 @@ VTT_MNEMONIC_FLAGS = {
 
 alpha_upper = string.ascii_uppercase
 
-mnemonic = Word(alpha_upper, bodyChars=alpha_upper + nums).setResultsName("mnemonic")
+mnemonic = Word(alpha_upper, body_chars=alpha_upper + nums).set_results_name("mnemonic")
 
 # XXX can't use pyparsing_common.signedInteger as the latest pyparsing 2.1.5
 # has a bug which always converts them to floats. Remove this once 2.1.6 is
 # published on PyPI.
 signed_integer = (
-    Regex(r"[+-]?\d+").setName("signed integer").setParseAction(tokenMap(int))
+    Regex(r"[+-]?\d+").set_name("signed integer").set_parse_action(token_map(int))
 )
 
-variable = Word(alphas, bodyChars=alphanums)
+variable = Word(alphas, body_chars=alphanums)
 
 stack_item = Suppress(",") + (signed_integer | Suppress("*") | variable)
 
-flag = oneOf(list(VTT_MNEMONIC_FLAGS.keys()))
+flag = one_of(list(VTT_MNEMONIC_FLAGS.keys()))
 # convert flag to binary string
-flag.setParseAction(tokenMap(lambda t: VTT_MNEMONIC_FLAGS[t]))
-flags = Combine(OneOrMore(flag)).setResultsName("flags")
+flag.set_parse_action(token_map(lambda t: VTT_MNEMONIC_FLAGS[t]))
+flags = Combine(OneOrMore(flag)).set_results_name("flags")
 
-delta_point_index = pyparsing_common.integer.setResultsName("point_index")
-delta_rel_ppem = pyparsing_common.integer.setResultsName("rel_ppem")
-delta_step_no = signed_integer.setResultsName("step_no")
+delta_point_index = pyparsing_common.integer.set_results_name("point_index")
+delta_rel_ppem = pyparsing_common.integer.set_results_name("rel_ppem")
+delta_step_no = signed_integer.set_results_name("step_no")
 # the step denominator is only used in VTT's DELTA[CP]* instructions,
 # and must always be 8 (sic!), so we can suppress it.
 delta_spec = (
@@ -83,28 +83,28 @@ delta_spec = (
 )
 
 # NOTE: The type-ignore is weird, the docs at
-# https://pyparsing-docs.readthedocs.io/en/latest/pyparsing.html?highlight=nestedExpr#pyparsing.nested_expr
+# https://pyparsing-docs.readthedocs.io/en/latest/pyparsing.html?highlight=nested_expr#pyparsing.nested_expr
 # say that passing None is okay, but the typing says something else.
-delta = nestedExpr("(", ")", delta_spec, ignoreExpr=None)  # type: ignore
+delta = nested_expr("(", ")", delta_spec, ignore_expr=None)  # type: ignore
 
-deltas = Group(OneOrMore(delta)).setResultsName("deltas")
+deltas = Group(OneOrMore(delta)).set_results_name("deltas")
 
 args = deltas | flags
 
-stack_items = OneOrMore(stack_item).setResultsName("stack_items")
+stack_items = OneOrMore(stack_item).set_results_name("stack_items")
 
 instruction = Group(
     mnemonic + Suppress("[") + Optional(args) + Suppress("]") + Optional(stack_items)
 )
 
 label = Word("#", alphanums)
-jump_label = Group(Combine(label + Literal(":")).setResultsName("mnemonic"))
+jump_label = Group(Combine(label + Literal(":")).set_results_name("mnemonic"))
 assignment = Group(
-    variable.setResultsName("variable")
+    variable.set_results_name("variable")
     + Literal("=").suppress()
-    + label.setResultsName("label")
-).setResultsName("assignment")
-jump_mnemonic = oneOf(["JMPR", "JROT", "JROF"]).setResultsName("mnemonic")
+    + label.set_results_name("label")
+).set_results_name("assignment")
+jump_mnemonic = one_of(["JMPR", "JROT", "JROF"]).set_results_name("mnemonic")
 jump = Group(
     jump_mnemonic
     + Suppress("[")
@@ -115,7 +115,7 @@ jump = Group(
     + Suppress(")")
 )
 
-pragma_memonic = Word("#", bodyChars=alpha_upper).setResultsName("mnemonic")
+pragma_memonic = Word("#", body_chars=alpha_upper).set_results_name("mnemonic")
 
 pragma = Group(pragma_memonic + Optional(stack_items))
 
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     with open(infile, "r") as fp:
         data = fp.read()
 
-    tokens = AssemblyParser.parseString(data, parseAll=True)
+    tokens = AssemblyParser.parse_string(data, parse_all=True)
 
     for i, t in enumerate(tokens):
         print(i, repr(t))
