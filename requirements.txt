@@ -2,7 +2,7 @@
 #    uv pip compile --universal pyproject.toml
 attrs==26.1.0
     # via ufolib2
-fonttools==4.62.1
+fonttools==4.63.0
     # via
     #   vttlib (pyproject.toml)
     #   ufolib2
